@@ -1,0 +1,158 @@
+<script>
+/* =========================================================
+   GLOBAL VARIABLES (KEKAL)
+========================================================= */
+var rawDataAnalisis = [], currentFilteredData = [], loggedInUser = null;
+var chartPerosakObj = null, chartKeterukanObj = null, chartTrendObj = null;
+var mapInstance = null, heatLayer = null;
+var verificationDataObj = { headers: [], rows: [] };
+
+/* === URL WEB APP GAS === */
+const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbwTaUOdYrKZpCspJAPx_UkKiHFH3FHOkrEA7v7_zYtgBEusnEXcXhMZfcU6_TtWQYHOUA/exec";
+
+/* =========================================================
+   1. LOGIN
+========================================================= */
+function attemptLogin() {
+  const u = usernameInput.value.trim();
+  const p = passwordInput.value.trim();
+  if (!u || !p) return showLoginError("Sila isi ID Pengguna dan Kata Laluan.");
+
+  const btn = document.querySelector('button[onclick="attemptLogin()"]');
+  btn.disabled = true;
+  btn.innerHTML = 'Semakan...';
+
+  fetch(`${WEBAPP_URL}?action=login&username=${encodeURIComponent(u)}&password=${encodeURIComponent(p)}`)
+    .then(r => r.json())
+    .then(res => {
+      if (res.error) {
+        showLoginError(res.message);
+        btn.disabled = false; btn.innerHTML = 'Log Masuk';
+        return;
+      }
+      loggedInUser = res;
+      welcomeUser.innerText = `Selamat datang, ${res.name} (${res.role.toUpperCase()} - ${res.state})`;
+      loginOverlay.style.display = 'none';
+      dashboardWrapper.style.display = 'block';
+      loadAnalisisData();
+      checkPendingCount();
+    })
+    .catch(e => showLoginError("Ralat Server"));
+}
+
+function showLoginError(msg) {
+  loginError.innerText = msg;
+  loginError.style.display = 'block';
+}
+function logout(){ location.reload(); }
+
+/* =========================================================
+   2. TAB NAVIGATION (KEKAL)
+========================================================= */
+function switchTab(tab) {
+  tabLinkAnalisis.classList.toggle('active', tab === 'analisis');
+  tabLinkPengesahan.classList.toggle('active', tab === 'pengesahan');
+  analisisSection.style.display = tab === 'analisis' ? 'block' : 'none';
+  pengesahanSection.style.display = tab === 'pengesahan' ? 'block' : 'none';
+  if (tab === 'pengesahan') loadVerificationData();
+}
+
+/* =========================================================
+   3. VERIFIKASI DATA
+========================================================= */
+function loadVerificationData() {
+  showLoader("Memuatkan data untuk pengesahan...");
+  fetch(`${WEBAPP_URL}?action=pending&state=${loggedInUser.state}&role=${loggedInUser.role}`)
+    .then(r => r.json())
+    .then(data => {
+      verificationDataObj = data;
+      hideLoader();
+      renderVerificationTable();
+      updatePendingBadge(data.rows.length);
+    })
+    .catch(() => hideLoader());
+}
+
+function checkPendingCount() {
+  fetch(`${WEBAPP_URL}?action=pending&state=${loggedInUser.state}&role=${loggedInUser.role}`)
+    .then(r => r.json())
+    .then(d => updatePendingBadge(d.rows.length));
+}
+
+function confirmAction(rowNumber, newStatus) {
+  let reason = "";
+  if (newStatus === 'DITOLAK') {
+    reason = prompt("Sila nyatakan sebab penolakan:");
+    if (!reason) return;
+  } else if (!confirm("Sahkan data ini?")) return;
+
+  fetch(`${WEBAPP_URL}?action=update`, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({
+      rowNumber, newStatus,
+      verifierName: loggedInUser.name,
+      reason
+    })
+  })
+  .then(r => r.json())
+  .then(res => {
+    alert(res.message);
+    if (res.success) loadVerificationData();
+  });
+}
+
+/* =========================================================
+   4. ANALISIS DATA
+========================================================= */
+function loadAnalisisData() {
+  showLoader("Memuatkan analisis...");
+  fetch(`${WEBAPP_URL}?action=dashboard&state=${loggedInUser.state}`)
+    .then(r => r.json())
+    .then(data => {
+      rawDataAnalisis = data;
+      hideLoader();
+      populateCheckboxes(data);
+      setTimeout(() => {
+        if (!mapInstance) initMap();
+        applyFilters();
+      }, 200);
+    })
+    .catch(() => hideLoader());
+}
+
+/* =========================================================
+   5. JANA PDF
+========================================================= */
+function confirmPDFGeneration() {
+  const s = reportStartDate.value, e = reportEndDate.value;
+  if (!s || !e) return alert("Sila pilih tarikh");
+
+  const filtered = currentFilteredData.filter(d => {
+    const dt = new Date(d.tarikh);
+    return dt >= new Date(s) && dt <= new Date(e + "T23:59:59");
+  });
+
+  fetch(`${WEBAPP_URL}?action=pdf`, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({
+      data: filtered,
+      filterInfo: {},
+      userName: loggedInUser.name,
+      user: loggedInUser
+    })
+  })
+  .then(r => r.json())
+  .then(res => {
+    const blob = new Blob(
+      [Uint8Array.from(atob(res.base64), c => c.charCodeAt(0))],
+      {type:'application/pdf'}
+    );
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = res.filename;
+    a.click();
+  });
+}
+</script>
