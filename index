@@ -1,161 +1,173 @@
-<script>
-/* =========================================================
-   GLOBAL VARIABLES (KEKAL)
-========================================================= */
-var rawDataAnalisis = [], currentFilteredData = [], loggedInUser = null;
-var chartPerosakObj = null, chartKeterukanObj = null, chartTrendObj = null;
-var mapInstance = null, heatLayer = null;
-var verificationDataObj = { headers: [], rows: [] };
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard PNR</title>
 
-/* === URL WEB APP GAS === */
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+<link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet">
+
+<style>
+body{background:#f4f6f9}
+#loginOverlay{position:fixed;inset:0;background:#212529;display:flex;align-items:center;justify-content:center;z-index:9999}
+.login-box{background:#fff;padding:30px;border-radius:15px;width:100%;max-width:420px}
+#map{height:450px;border-radius:12px}
+.chart-box{background:#fff;padding:20px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,.05)}
+.kpi-card{background:#fff;padding:20px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,.05)}
+</style>
+</head>
+
+<body>
+
+<!-- ================= LOGIN ================= -->
+<div id="loginOverlay">
+  <div class="login-box">
+    <h4 class="mb-3 text-center">🔒 Akses Dashboard</h4>
+    <input id="usernameInput" class="form-control mb-2" placeholder="ID Pengguna">
+    <input id="passwordInput" type="password" class="form-control mb-3" placeholder="Kata Laluan">
+    <button class="btn btn-success w-100 fw-bold" onclick="attemptLogin()">Log Masuk</button>
+    <div id="loginError" class="text-danger mt-2 small"></div>
+  </div>
+</div>
+
+<!-- ================= DASHBOARD ================= -->
+<div id="dashboardWrapper" style="display:none">
+
+<nav class="navbar navbar-dark bg-success px-3">
+  <span class="navbar-brand fw-bold">🌱 Dashboard PNR</span>
+  <span id="welcomeUser" class="text-white small"></span>
+  <button class="btn btn-outline-light btn-sm" onclick="logout()">Log Keluar</button>
+</nav>
+
+<div class="container-fluid mt-4">
+
+<div id="globalLoader" class="text-center my-5" style="display:none">
+  <div class="spinner-border text-success"></div>
+  <div id="loadingText" class="mt-2 text-muted"></div>
+</div>
+
+<!-- KPI -->
+<div class="row g-3 mb-4">
+  <div class="col-md-4"><div class="kpi-card"><div class="text-muted small">Jumlah Luas Bancian</div><div class="fs-3 fw-bold"><span id="kpiLuasBertanam">0</span> ha</div></div></div>
+  <div class="col-md-4"><div class="kpi-card"><div class="text-muted small">Jumlah Luas Serangan</div><div class="fs-3 fw-bold text-danger"><span id="kpiLuasSerangan">0</span> ha</div></div></div>
+  <div class="col-md-4"><div class="kpi-card"><div class="text-muted small">Indeks Serangan</div><div class="fs-3 fw-bold"><span id="kpiPeratus">0</span>%</div></div></div>
+</div>
+
+<!-- MAP -->
+<div class="chart-box mb-4">
+  <h6 class="fw-bold mb-2">🗺️ Peta Serangan</h6>
+  <div id="map"></div>
+</div>
+
+<!-- TABLE -->
+<div class="chart-box">
+  <h6 class="fw-bold mb-3">📋 Senarai Rekod Disahkan</h6>
+  <div class="table-responsive">
+    <table class="table table-striped">
+      <thead class="table-dark">
+        <tr>
+          <th>Tarikh</th><th>Negeri</th><th>Daerah</th><th>Tanaman</th><th>Luas Tanam</th><th>Luas Serangan</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+</div>
+
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+
+<script>
+/* ================= CONFIG ================= */
 const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbwTaUOdYrKZpCspJAPx_UkKiHFH3FHOkrEA7v7_zYtgBEusnEXcXhMZfcU6_TtWQYHOUA/exec";
 
-/* =========================================================
-   1. LOGIN
-========================================================= */
-function attemptLogin() {
-  const u = usernameInput.value.trim();
-  const p = passwordInput.value.trim();
-  if (!u || !p) return showLoginError("Sila isi ID Pengguna dan Kata Laluan.");
+/* ================= GLOBAL ================= */
+let loggedInUser=null, rawData=[], map, heatLayer;
 
-  const btn = document.querySelector('button[onclick="attemptLogin()"]');
-  btn.disabled = true;
-  btn.innerHTML = 'Semakan...';
+/* ================= LOGIN ================= */
+function attemptLogin(){
+  const u=usernameInput.value.trim();
+  const p=passwordInput.value.trim();
+  if(!u||!p){loginError.innerText="Sila isi ID & kata laluan";return}
 
   fetch(`${WEBAPP_URL}?action=login&username=${encodeURIComponent(u)}&password=${encodeURIComponent(p)}`)
-    .then(r => r.json())
-    .then(res => {
-      if (res.error) {
-        showLoginError(res.message);
-        btn.disabled = false; btn.innerHTML = 'Log Masuk';
-        return;
-      }
-      loggedInUser = res;
-      welcomeUser.innerText = `Selamat datang, ${res.name} (${res.role.toUpperCase()} - ${res.state})`;
-      loginOverlay.style.display = 'none';
-      dashboardWrapper.style.display = 'block';
-      loadAnalisisData();
-      checkPendingCount();
-    })
-    .catch(e => showLoginError("Ralat Server"));
+    .then(r=>r.json())
+    .then(res=>{
+      if(res.error){loginError.innerText=res.message;return}
+      loggedInUser=res;
+      welcomeUser.innerText=`${res.name} (${res.role.toUpperCase()} - ${res.state})`;
+      loginOverlay.style.display="none";
+      dashboardWrapper.style.display="block";
+      loadDashboard();
+    });
 }
 
-function showLoginError(msg) {
-  loginError.innerText = msg;
-  loginError.style.display = 'block';
-}
-function logout(){ location.reload(); }
+function logout(){location.reload()}
 
-/* =========================================================
-   2. TAB NAVIGATION (KEKAL)
-========================================================= */
-function switchTab(tab) {
-  tabLinkAnalisis.classList.toggle('active', tab === 'analisis');
-  tabLinkPengesahan.classList.toggle('active', tab === 'pengesahan');
-  analisisSection.style.display = tab === 'analisis' ? 'block' : 'none';
-  pengesahanSection.style.display = tab === 'pengesahan' ? 'block' : 'none';
-  if (tab === 'pengesahan') loadVerificationData();
-}
-
-/* =========================================================
-   3. VERIFIKASI DATA
-========================================================= */
-function loadVerificationData() {
-  showLoader("Memuatkan data untuk pengesahan...");
-  fetch(`${WEBAPP_URL}?action=pending&state=${loggedInUser.state}&role=${loggedInUser.role}`)
-    .then(r => r.json())
-    .then(data => {
-      verificationDataObj = data;
-      hideLoader();
-      renderVerificationTable();
-      updatePendingBadge(data.rows.length);
-    })
-    .catch(() => hideLoader());
-}
-
-function checkPendingCount() {
-  fetch(`${WEBAPP_URL}?action=pending&state=${loggedInUser.state}&role=${loggedInUser.role}`)
-    .then(r => r.json())
-    .then(d => updatePendingBadge(d.rows.length));
-}
-
-function confirmAction(rowNumber, newStatus) {
-  let reason = "";
-  if (newStatus === 'DITOLAK') {
-    reason = prompt("Sila nyatakan sebab penolakan:");
-    if (!reason) return;
-  } else if (!confirm("Sahkan data ini?")) return;
-
-  fetch(`${WEBAPP_URL}?action=update`, {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({
-      rowNumber, newStatus,
-      verifierName: loggedInUser.name,
-      reason
-    })
-  })
-  .then(r => r.json())
-  .then(res => {
-    alert(res.message);
-    if (res.success) loadVerificationData();
-  });
-}
-
-/* =========================================================
-   4. ANALISIS DATA
-========================================================= */
-function loadAnalisisData() {
-  showLoader("Memuatkan analisis...");
+/* ================= DATA ================= */
+function loadDashboard(){
+  showLoader("Memuatkan data...");
   fetch(`${WEBAPP_URL}?action=dashboard&state=${loggedInUser.state}`)
-    .then(r => r.json())
-    .then(data => {
-      rawDataAnalisis = data;
+    .then(r=>r.json())
+    .then(data=>{
+      rawData=data;
       hideLoader();
-      populateCheckboxes(data);
-      setTimeout(() => {
-        if (!mapInstance) initMap();
-        applyFilters();
-      }, 200);
-    })
-    .catch(() => hideLoader());
+      updateKPI(data);
+      renderTable(data);
+      renderMap(data);
+    });
 }
 
-/* =========================================================
-   5. JANA PDF
-========================================================= */
-function confirmPDFGeneration() {
-  const s = reportStartDate.value, e = reportEndDate.value;
-  if (!s || !e) return alert("Sila pilih tarikh");
+/* ================= UI ================= */
+function showLoader(msg){loadingText.innerText=msg;globalLoader.style.display="block"}
+function hideLoader(){globalLoader.style.display="none"}
 
-  const filtered = currentFilteredData.filter(d => {
-    const dt = new Date(d.tarikh);
-    return dt >= new Date(s) && dt <= new Date(e + "T23:59:59");
-  });
+function updateKPI(data){
+  let l=0,s=0;
+  data.forEach(d=>{l+=d.luasBertanam;s+=d.luasSerangan});
+  kpiLuasBertanam.innerText=l.toFixed(2);
+  kpiLuasSerangan.innerText=s.toFixed(2);
+  kpiPeratus.innerText=(l>0?(s/l)*100:0).toFixed(1);
+}
 
-  fetch(`${WEBAPP_URL}?action=pdf`, {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({
-      data: filtered,
-      filterInfo: {},
-      userName: loggedInUser.name,
-      user: loggedInUser
-    })
-  })
-  .then(r => r.json())
-  .then(res => {
-    const blob = new Blob(
-      [Uint8Array.from(atob(res.base64), c => c.charCodeAt(0))],
-      {type:'application/pdf'}
-    );
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = res.filename;
-    a.click();
+function renderTable(data){
+  tableBody.innerHTML="";
+  data.forEach(d=>{
+    tableBody.innerHTML+=`
+    <tr>
+      <td>${d.tarikh}</td>
+      <td>${d.negeri}</td>
+      <td>${d.daerah}</td>
+      <td>${d.tanaman}</td>
+      <td>${d.luasBertanam}</td>
+      <td class="text-danger fw-bold">${d.luasSerangan}</td>
+    </tr>`;
   });
 }
+
+/* ================= MAP ================= */
+function renderMap(data){
+  if(!map){
+    map=L.map('map').setView([4.2,101.9],6);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+  }
+  if(heatLayer) map.removeLayer(heatLayer);
+  let pts=[];
+  data.forEach(d=>{
+    if(d.koordinat && d.koordinat.includes(",")){
+      const [lat,lng]=d.koordinat.split(",").map(Number);
+      if(!isNaN(lat)) pts.push([lat,lng,1]);
+    }
+  });
+  heatLayer=L.heatLayer(pts,{radius:25}).addTo(map);
+}
 </script>
-<script>
-  alert("JS dashboard hidup");
-</script>
+
+</body>
+</html>
