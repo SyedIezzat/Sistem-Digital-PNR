@@ -1,59 +1,20 @@
-<!DOCTYPE html>
-<html lang="ms">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Login Dashboard PNR</title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-
-<body class="bg-dark">
-
-<div class="vh-100 d-flex align-items-center justify-content-center">
-  <div class="bg-white p-4 rounded shadow" style="width:350px">
-    <h5 class="text-center mb-3">🔒 Login</h5>
-
-    <input id="username" class="form-control mb-2" placeholder="Username">
-    <input id="password" type="password" class="form-control mb-3" placeholder="Password">
-
-    <button id="loginBtn" class="btn btn-success w-100">
-      Log Masuk
-    </button>
-
-    <div id="msg" class="text-danger small mt-2"></div>
-  </div>
-</div>
-
 <script>
-const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzi8Vpza9jEy9PBmyJsBndqTb9Zpi1HpAO10a35LfBUhQFS9pRyTI52vw6M4hDgPzSagA/exec";
-
-document.getElementById("loginBtn").addEventListener("click", attemptLogin);
-
-function attemptLogin() {
-  console.log("LOGIN DITEKAN");
-
-  const u = document.getElementById("username").value.trim();
-  const p = document.getElementById("password").value.trim();
-
-  if (!u || !p) {
-    alert("Sila isi username & password");
-    return;
-  }
-
-  const url = `${WEBAPP_URL}?action=verifyUserLogin&username=${encodeURIComponent(u)}&password=${encodeURIComponent(p)}`;
-  console.log("FETCH URL:", url);
-
-  fetch(url)
+function loadAnalisisData() {
+  fetch(`${WEBAPP_URL}?action=getAllDashboardData&state=${loggedInUser.state}`)
     .then(r => r.json())
-    .then(res => {
-      console.log("RESPON:", res);
+    .then(data => {
+      console.log("DATA DITERIMA:", data);
 
-      if (res.error) {
-        document.getElementById("msg").innerText = res.message;
+      if (!Array.isArray(data) || data.length === 0) {
+        alert("Tiada data DISAHKAN dalam spreadsheet");
         return;
       }
 
-      alert("Login berjaya: " + res.name);
+      document.querySelector(".container").innerHTML += `
+        <pre style="background:#eee;padding:10px;">
+${JSON.stringify(data, null, 2)}
+        </pre>
+      `;
     })
     .catch(err => {
       console.error(err);
@@ -61,6 +22,3 @@ function attemptLogin() {
     });
 }
 </script>
-
-</body>
-</html>
