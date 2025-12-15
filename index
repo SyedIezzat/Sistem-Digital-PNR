@@ -156,3 +156,6 @@ function confirmPDFGeneration() {
   });
 }
 </script>
+<script>
+  alert("JS dashboard hidup");
+</script>
