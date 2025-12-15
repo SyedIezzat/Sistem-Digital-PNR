@@ -40,39 +40,29 @@ body{background:#f8f9fa}
 </div>
 
 <script>
-/* ===============================
-   KONFIGURASI
-================================ */
-const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbxUps3nCkKGL4lZfwjkU7DLjCHqVRsjCCdUfZq4tOXyHPGxuyDrEgxwEgFeYEIzVqgqxw/exec";
+const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbx-UQ5MGsC668b2qIUwEwShUkAy49PXXDYkoZygKN7VtvxVCHCO_r29O3PTbXrX9-IQZg/exec";
 
-/* ===============================
-   GLOBAL
-================================ */
-let loggedInUser = null;
-
-/* ===============================
-   LOGIN
-================================ */
-function attemptLogin(){
+function attemptLogin() {
   const u = usernameInput.value.trim();
   const p = passwordInput.value.trim();
-  if(!u||!p){loginError.innerText="Sila isi semua";return;}
+  if (!u || !p) return alert("Sila isi login");
 
-  fetch(`${WEBAPP_URL}?action=login&username=${encodeURIComponent(u)}&password=${encodeURIComponent(p)}`)
-  .then(r=>r.json())
-  .then(res=>{
-    if(res.error){
-      loginError.innerText=res.message;
-      return;
-    }
-    loggedInUser = res;
-    welcomeUser.innerText = `Selamat datang, ${res.name} (${res.role.toUpperCase()} - ${res.state})`;
-    loginOverlay.style.display="none";
-    dashboardWrapper.style.display="block";
-  })
-  .catch(()=>loginError.innerText="Ralat sambungan");
+  fetch(`${WEBAPP_URL}?action=verifyUserLogin&username=${encodeURIComponent(u)}&password=${encodeURIComponent(p)}`)
+    .then(r => r.json())
+    .then(res => {
+      if (res.error) {
+        alert(res.message);
+        return;
+      }
+
+      loggedInUser = res;
+      loginOverlay.style.display = "none";
+      dashboardWrapper.style.display = "block";
+      document.getElementById("welcomeUser").innerText =
+        `Selamat datang, ${res.name} (${res.role.toUpperCase()})`;
+
+      loadAnalisisData();
+    })
+    .catch(err => alert("Ralat sambungan"));
 }
 </script>
-
-</body>
-</html>
