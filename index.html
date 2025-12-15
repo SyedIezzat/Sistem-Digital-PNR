@@ -13,7 +13,7 @@
   <div class="bg-white p-4 rounded shadow" style="width:350px">
     <h5 class="text-center mb-3">🔒 Login</h5>
 
-    <input id="username" class="="form-control mb-2" placeholder="Username">
+    <input id="username" class="form-control mb-2" placeholder="Username">
     <input id="password" type="password" class="form-control mb-3" placeholder="Password">
 
     <button id="loginBtn" class="btn btn-success w-100">
@@ -24,26 +24,27 @@
   </div>
 </div>
 
-<!-- TEMPAT PAPAR DATA -->
-<div id="output" class="container mt-4 text-white"></div>
-
 <script>
 /* ===============================
-   KONFIGURASI
+   CONFIG
 ================================ */
-const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzi8Vpza9jEy9PBmyJsBndqTb9Zpi1HpAO10a35LfBUhQFS9pRyTI52vw6M4hDgPzSagA/exec; // 🔴 GANTI URL AWAK
-
+const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzi8Vpza9jEy9PBmyJsBndqTb9Zpi1HpAO10a35LfBUhQFS9pRyTI52vw6M4hDgPzSagA/exec";
 let loggedInUser = null;
 
 /* ===============================
-   LOGIN
+   LOGIN EVENT
 ================================ */
-document.getElementById("loginBtn").addEventListener("click", () => {
+document.getElementById("loginBtn").addEventListener("click", attemptLogin);
+
+function attemptLogin() {
+  console.log("BUTANG LOGIN DIKLIK");
+
   const u = document.getElementById("username").value.trim();
   const p = document.getElementById("password").value.trim();
+  const msg = document.getElementById("msg");
 
   if (!u || !p) {
-    msg.innerText = "Sila isi username & password";
+    msg.innerText = "Sila isi username dan password";
     return;
   }
 
@@ -58,40 +59,31 @@ document.getElementById("loginBtn").addEventListener("click", () => {
       }
 
       loggedInUser = res;
+      msg.classList.remove("text-danger");
+      msg.classList.add("text-success");
       msg.innerText = "Login berjaya";
 
-      loadAnalisisData(); // 🔥 PENTING
+      loadAnalisisData();
     })
     .catch(err => {
       console.error(err);
-      msg.innerText = "Ralat sambungan";
+      msg.innerText = "Ralat sambungan ke server";
     });
-});
+}
 
 /* ===============================
-   LOAD DATA (DEBUG)
+   TEST DATA LOAD
 ================================ */
 function loadAnalisisData() {
   fetch(`${WEBAPP_URL}?action=getAllDashboardData&state=${loggedInUser.state}`)
     .then(r => r.json())
     .then(data => {
       console.log("DATA DITERIMA:", data);
-
-      if (!Array.isArray(data)) {
-        alert("Data bukan array — semak backend");
-        return;
-      }
-
-      document.getElementById("output").innerHTML = `
-        <h5>Data Dashboard (${data.length} rekod)</h5>
-        <pre style="background:#222;color:#0f0;padding:10px;">
-${JSON.stringify(data, null, 2)}
-        </pre>
-      `;
+      alert("Data diterima, semak console");
     })
     .catch(err => {
       console.error(err);
-      alert("Ralat ambil data dashboard");
+      alert("Gagal ambil data");
     });
 }
 </script>
