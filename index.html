@@ -41,39 +41,52 @@ body{background:#f8f9fa}
 
 <script>
 let loggedInUser = null;
-
 const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbw6BhrJCJcJYT9fZ-pAhZNY5akunn_cE4NLIV10kVF-di3UseT_ogGWBp-ApSuoumuGdw/exec";
 
 function attemptLogin() {
   const u = document.getElementById("usernameInput").value.trim();
   const p = document.getElementById("passwordInput").value.trim();
 
-  if (!u || !p) {
-    alert("Sila isi login");
-    return;
-  }
-
   fetch(`${WEBAPP_URL}?action=verifyUserLogin&username=${encodeURIComponent(u)}&password=${encodeURIComponent(p)}`)
     .then(r => r.json())
     .then(res => {
-      if (res.error) {
-        alert(res.message);
+      if (res.error) return alert(res.message);
+
+      loggedInUser = res;
+      loginOverlay.style.display = "none";
+      dashboardWrapper.style.display = "block";
+      welcomeUser.innerText =
+        `Selamat datang, ${res.name} (${res.role.toUpperCase()})`;
+
+      // 👉 INI BARU AMBIL DATA
+      loadAnalisisData();
+    });
+}
+
+function loadAnalisisData() {
+  const state = loggedInUser.state || "ALL";
+
+  fetch(`${WEBAPP_URL}?action=getAllDashboardData&state=${encodeURIComponent(state)}`)
+    .then(r => r.json())
+    .then(data => {
+      console.log("DATA DITERIMA:", data);
+
+      if (!Array.isArray(data) || data.length === 0) {
+        alert("Tiada data ditemui");
         return;
       }
 
-      // LOGIN BERJAYA
-      loggedInUser = res;
-
-      document.getElementById("loginOverlay").style.display = "none";
-      document.getElementById("dashboardWrapper").style.display = "block";
-      document.getElementById("welcomeUser").innerText =
-        `Selamat datang, ${res.name} (${res.role.toUpperCase()})`;
-
-      console.log("LOGIN OK:", loggedInUser);
+      // Contoh paparan ringkas
+      const container = document.createElement("pre");
+      container.style.background = "#fff";
+      container.style.padding = "15px";
+      container.style.borderRadius = "8px";
+      container.textContent = JSON.stringify(data.slice(0, 3), null, 2);
+      document.querySelector(".container").appendChild(container);
     })
     .catch(err => {
       console.error(err);
-      alert("Ralat sambungan ke server");
+      alert("Gagal ambil data");
     });
 }
 </script>
