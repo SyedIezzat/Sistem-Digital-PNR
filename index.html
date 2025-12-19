@@ -57,10 +57,10 @@
     
     <nav>
       <div class="nav-link active" onclick="switchTab('main',this)">
-        <i class="bi bi-grid-fill"></i> Ringkasan
+        <i class="bi bi-grid-fill"></i> Rumusan Data
       </div>
       <div class="nav-link" onclick="switchTab('verify',this)">
-        <i class="bi bi-check-circle-fill"></i> Pengesahan 
+        <i class="bi bi-check-circle-fill"></i> Pengesahan Data
         <span class="badge bg-danger float-end" id="badgePending" style="display:none">0</span>
       </div>
     </nav>
@@ -110,28 +110,28 @@
       <div class="row g-3 mb-4">
         <div class="col-md-3">
           <div class="stat-card">
-            <small class="text-muted">LUAS TANAM</small>
+            <small class="text-muted">LUAS BANCIAN</small>
             <h2 class="fw-bold mb-0" id="k1">0</h2>
             <small>Hektar</small>
           </div>
         </div>
         <div class="col-md-3">
           <div class="stat-card" style="border-color:#dc2626">
-            <small class="text-muted">LUAS SERANG</small>
+            <small class="text-muted">LUAS SERANGAN</small>
             <h2 class="fw-bold text-danger mb-0" id="k2">0</h2>
             <small>Hektar</small>
           </div>
         </div>
         <div class="col-md-3">
           <div class="stat-card" style="border-color:#f59e0b">
-            <small class="text-muted">INDEKS (%)</small>
+            <small class="text-muted">PERATUS SERANGAN</small>
             <h2 class="fw-bold text-warning mb-0" id="k3">0%</h2>
-            <small>Keterukan</small>
+            <small>%</small>
           </div>
         </div>
         <div class="col-md-3">
           <div class="stat-card" style="border-color:#2563eb">
-            <small class="text-muted">REKOD</small>
+            <small class="text-muted">BIL REKOD</small>
             <h2 class="fw-bold text-primary mb-0" id="k4">0</h2>
             <small>Unit</small>
           </div>
@@ -141,13 +141,13 @@
       <div class="row g-3 mb-4">
         <div class="col-lg-8">
           <div class="chart-container" style="height:300px">
-            <h6 class="fw-bold mb-3">Top Serangan Perosak (Ha)</h6>
+            <h6 class="fw-bold mb-3">Serangan Perosak Tertinggi (Ha)</h6>
             <canvas id="cBar"></canvas>
           </div>
         </div>
         <div class="col-lg-4">
           <div class="chart-container" style="height:300px">
-            <h6 class="fw-bold mb-3">Taburan Keterukan</h6>
+            <h6 class="fw-bold mb-3">Purata Keterukan Serangan</h6>
             <canvas id="cPie"></canvas>
           </div>
         </div>
@@ -165,7 +165,7 @@
         <div class="table-responsive">
           <table class="table table-sm table-hover align-middle">
             <thead class="table-light">
-              <tr><th>Tarikh</th><th>Negeri</th><th>Lokasi</th><th>Tanaman</th><th>Tanam</th><th>Serang</th></tr>
+              <tr><th>Tarikh</th><th>Negeri</th><th>Lokasi</th><th>Tanaman</th><th>Luas Bancian</th><th>Luas Serangan</th></tr>
             </thead>
             <tbody id="tBody"></tbody>
           </table>
