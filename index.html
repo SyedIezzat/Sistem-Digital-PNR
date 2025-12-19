@@ -66,9 +66,15 @@
     }
 
     // 1. LOGIN
+    1. LOGIN
     async function doLogin(){
-      const u=document.getElementById('uid').value, p=document.getElementById('pwd').value, b=document.getElementById('btnLogin');
-      const msg=document.getElementById('loginMsg');
+      // --- TAMBAH 2 BARIS INI ---
+      alert("Butang Berfungsi!"); 
+      console.log("Mula proses login...");
+      // --------------------------
+
+      const u=document.getElementById('uid').value;
+      const p=document.getElementById('pwd').value;
       
       if(!u || !p) { msg.innerText="Sila isi ID dan Kata Laluan."; return; }
       
