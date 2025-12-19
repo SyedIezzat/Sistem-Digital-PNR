@@ -244,7 +244,7 @@
         const r=d.rows, h=d.headers;
         document.getElementById('badgePending').innerText=r.length; document.getElementById('badgePending').style.display=r.length?'inline':'none';
         if(!r.length){ tb.innerHTML='<tr><td colspan="100%" class="text-center p-3 text-muted">Tiada Data Baru</td></tr>'; document.getElementById('vHead').innerHTML=''; return; }
-        let hh=`<th>#</th>`; h.forEach(x=>hh+=`<th>${x}</th>`); hh+=`<th class="bg-warning text-dark sticky-end" style="right:0">AKSI</th>`; document.getElementById('vHead').innerHTML=hh;
+        let hh=`<th>#</th>`; h.forEach(x=>hh+=`<th>${x}</th>`); hh+=`<th class="bg-warning text-dark sticky-end" style="right:0">TINDAKAN</th>`; document.getElementById('vHead').innerHTML=hh;
         let bb=``; r.forEach((x,i)=>{
           bb+=`<tr id="r-${x.row}"><td class="text-center text-muted">${i+1}</td>`;
           x.data.forEach(c=>{ let s=String(c); bb+=`<td>${s.length>40?`<span title="${s}">${s.substr(0,40)}..</span>`:s}</td>` });
