@@ -26,7 +26,7 @@
 <body>
 
   <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbzrNoNbZXTh-fvUnWIJ4qeD4ERXbOgOCG4mxYee_pWfnv8KYhOYxDZzEkzJBDz7S4QY/exec"; 
+    const API_URL = "https://script.google.com/macros/s/AKfycby5yazg0mhFsdNoaKUmkYu4znSKjR1NJ7ZZirnSssY2nwxPqMEXvMMoPaxKJJGzZ5Ff/exec"; 
   </script>
 
   <div id="loginOverlay">
@@ -106,22 +106,60 @@
 
     // --- REPLACED google.script.run WITH fetch() ---
 
+   // --- GANTIKAN FUNGSI postData DAN doLogin INI ---
+
     async function postData(action, payload) {
-      const formData = new FormData();
-      formData.append('action', action);
-      // Hack for GAS DoPost: Send JSON string as body
-      const res = await fetch(API_URL, {
+      // Masukkan action dalam URL query string juga sebagai backup
+      const urlWithAction = `${API_URL}?action=${action}`;
+      
+      const res = await fetch(urlWithAction, {
         method: "POST",
-        body: JSON.stringify({...payload, action: action}) // Send payload + action in body
+        // PENTING: Guna text/plain untuk elak CORS preflight Google
+        headers: { "Content-Type": "text/plain;charset=utf-8" }, 
+        body: JSON.stringify({...payload, action: action})
       });
-      return await res.json();
+      
+      const text = await res.text();
+      try {
+        return JSON.parse(text);
+      } catch (e) {
+        console.error("Server Response (Not JSON):", text);
+        throw new Error("Respon server bukan JSON. Semak Deployment 'Anyone'.");
+      }
     }
 
-    async function getData(action, params = "") {
-      const res = await fetch(`${API_URL}?action=${action}${params}`);
-      return await res.json();
-    }
+    async function doLogin(){
+      const u=document.getElementById('uid').value;
+      const p=document.getElementById('pwd').value;
+      const b=document.getElementById('btnLogin');
+      const msg = document.getElementById('loginMsg');
+      
+      if(!u || !p) { msg.innerText = "Sila isi semua ruang."; return; }
 
+      b.disabled=true; b.innerText="Memproses...";
+      msg.innerText = "";
+      
+      try {
+        const r = await postData('login', {u, p});
+        
+        console.log("Login Response:", r); // Tengok console (F12)
+
+        if(r.success){ 
+          uProf=r; 
+          document.getElementById('uDisp').innerText=r.name; 
+          document.getElementById('loginOverlay').style.display='none'; 
+          initDash(); 
+        } else { 
+          // Ambil message ATAU error jika message tak wujud
+          msg.innerText = r.message || r.error || "Ralat tidak diketahui (Undefined)";
+          b.disabled=false; b.innerText="MASUK"; 
+        }
+      } catch(e) { 
+        console.error(e);
+        msg.innerText = "Gagal menyambung ke server. " + e.message; 
+        b.disabled=false; b.innerText="MASUK";
+      }
+    }
     // 1. LOGIN
     async function doLogin(){
       const u=document.getElementById('uid').value, p=document.getElementById('pwd').value, b=document.getElementById('btnLogin');
