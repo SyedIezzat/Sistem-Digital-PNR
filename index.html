@@ -41,176 +41,17 @@
     // ⚠️ PENTING: Gantikan URL di bawah dengan URL Web App anda sendiri!
     const API_URL = "https://script.google.com/macros/s/AKfycbwdxk4dyXCznUkETS8abnR6MuRvDEAIGSxNF0tLJmDCKLvI5DB_axm2FWQY2PF3sF4F/exec"; 
   </script>
-
-  <div id="loginOverlay">
-    <div class="card p-4 shadow text-center" style="width: 350px;">
-      <h4 class="fw-bold text-success mb-3">PNR Digital</h4>
-      <input type="text" id="uid" class="form-control mb-2" placeholder="ID Pengguna">
-      <input type="password" id="pwd" class="form-control mb-3" placeholder="Kata Laluan">
-      <button onclick="doLogin()" class="btn btn-success w-100 fw-bold" id="btnLogin">LOG MASUK</button>
-      <small id="loginMsg" class="text-danger d-block mt-2"></small>
-    </div>
-  </div>
-
-  <div class="sidebar" id="sidebar">
-    <h5 class="fw-bold text-success mb-4 px-2"><i class="bi bi-flower1"></i> PNR Pro</h5>
-    
-    <nav>
-      <div class="nav-link active" onclick="switchTab('main',this)">
-        <i class="bi bi-grid-fill"></i> Ringkasan
-      </div>
-      <div class="nav-link" onclick="switchTab('verify',this)">
-        <i class="bi bi-check-circle-fill"></i> Pengesahan 
-        <span class="badge bg-danger float-end" id="badgePending" style="display:none">0</span>
-      </div>
-    </nav>
-    <hr>
-    
-    <div id="filterSec">
-      <small class="fw-bold text-muted px-2">PENAPIS DATA</small>
-      <div class="mt-2 px-2">
-        <label class="small text-secondary">Negeri</label>
-        <select id="selNegeri" class="form-select form-select-sm mb-2" onchange="runFilter()"></select>
-        
-        <label class="small text-secondary">Tanaman</label>
-        <select id="selTanaman" class="form-select form-select-sm mb-2" onchange="runFilter()"></select>
-        
-        <label class="small text-secondary">Kategori</label>
-        <select id="selKategori" class="form-select form-select-sm mb-2" onchange="runFilter()"></select>
-        
-        <label class="small text-primary mt-2">Tarikh Mula</label>
-        <input type="date" id="dS" class="form-control form-control-sm mb-2" onchange="runFilter()">
-        
-        <label class="small text-primary">Tarikh Tamat</label>
-        <input type="date" id="dE" class="form-control form-control-sm mb-2" onchange="runFilter()">
-      </div>
-    </div>
-
-    <div class="mt-auto px-2 pt-4">
-      <div class="bg-light p-3 rounded text-center border">
-        <small class="d-block text-muted">Pengguna:</small>
-        <strong id="uDisp">-</strong>
-        <button class="btn btn-sm btn-outline-danger w-100 mt-2" onclick="location.reload()">Keluar</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="main-content">
-    <button class="btn btn-light border d-md-none mb-3" onclick="document.getElementById('sidebar').classList.toggle('active')"><i class="bi bi-list"></i> Menu</button>
-
-    <div id="view-main">
-      <div class="d-flex justify-content-between align-items-center mb-4">
-        <h4 class="fw-bold text-dark m-0">Analisis Data</h4>
-        <div class="btn-group">
-          <button class="btn btn-sm btn-danger" onclick="dlPDF()"><i class="bi bi-file-earmark-pdf-fill"></i> PDF</button>
-          <button class="btn btn-sm btn-primary" onclick="initDash()"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
-        </div>
-      </div>
-
-      <div class="row g-3 mb-4">
-        <div class="col-md-3">
-          <div class="stat-card">
-            <small class="text-muted">LUAS TANAM</small>
-            <h2 class="fw-bold mb-0" id="k1">0</h2>
-            <small>Hektar</small>
-          </div>
-        </div>
-        <div class="col-md-3">
-          <div class="stat-card" style="border-color:#dc2626">
-            <small class="text-muted">LUAS SERANG</small>
-            <h2 class="fw-bold text-danger mb-0" id="k2">0</h2>
-            <small>Hektar</small>
-          </div>
-        </div>
-        <div class="col-md-3">
-          <div class="stat-card" style="border-color:#f59e0b">
-            <small class="text-muted">INDEKS (%)</small>
-            <h2 class="fw-bold text-warning mb-0" id="k3">0%</h2>
-            <small>Keterukan</small>
-          </div>
-        </div>
-        <div class="col-md-3">
-          <div class="stat-card" style="border-color:#2563eb">
-            <small class="text-muted">REKOD</small>
-            <h2 class="fw-bold text-primary mb-0" id="k4">0</h2>
-            <small>Unit</small>
-          </div>
-        </div>
-      </div>
-
-      <div class="row g-3 mb-4">
-        <div class="col-lg-8">
-          <div class="chart-container" style="height:300px">
-            <h6 class="fw-bold mb-3">Top Serangan Perosak (Ha)</h6>
-            <canvas id="cBar"></canvas>
-          </div>
-        </div>
-        <div class="col-lg-4">
-          <div class="chart-container" style="height:300px">
-            <h6 class="fw-bold mb-3">Taburan Keterukan</h6>
-            <canvas id="cPie"></canvas>
-          </div>
-        </div>
-      </div>
-
-      <div class="chart-container p-0 mb-4 overflow-hidden">
-        <div id="map"></div>
-      </div>
-
-      <div class="chart-container">
-        <div class="d-flex justify-content-between mb-2">
-          <h6 class="fw-bold">Data Terperinci</h6>
-          <span id="pgInfo" class="small text-muted"></span>
-        </div>
-        <div class="table-responsive">
-          <table class="table table-sm table-hover align-middle">
-            <thead class="table-light">
-              <tr><th>Tarikh</th><th>Negeri</th><th>Lokasi</th><th>Tanaman</th><th>Tanam</th><th>Serang</th></tr>
-            </thead>
-            <tbody id="tBody"></tbody>
-          </table>
-        </div>
-        <div class="mt-2 text-end">
-          <button class="btn btn-sm btn-secondary" onclick="movePg(-1)">Prev</button> 
-          <button class="btn btn-sm btn-secondary" onclick="movePg(1)">Next</button>
-        </div>
-      </div>
-    </div>
-
-    <div id="view-verify" style="display:none">
-      <div class="d-flex justify-content-between mb-3 align-items-center">
-        <h4 class="fw-bold text-dark m-0">Pengesahan Data</h4>
-        <button class="btn btn-sm btn-primary" onclick="loadPend()">
-          <i class="bi bi-arrow-clockwise"></i> Refresh
-        </button>
-      </div>
-      
-      <div class="chart-container table-responsive" style="max-height:75vh">
-        <table class="table table-bordered table-sm small align-middle" style="white-space:nowrap">
-          <thead class="table-dark sticky-top" style="top:0; z-index:10">
-            <tr id="vHead"></tr>
-          </thead>
-          <tbody id="vBody">
-            <tr><td class="text-center p-3">Tekan Refresh untuk muat data...</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-  </div>
-
-  <script>
+<script>
     // --- GLOBAL VARIABLES ---
     let mData=[], fData=[], uProf=null, charts={}, map=null, layer=null, pg=1, pSize=10;
 
-    // --- CORE: POST DATA FUNCTION (STABILIZER) ---
+    // --- CORE: POST DATA FUNCTION (ENJIN UTAMA) ---
     async function postData(action, payload) {
       // Kita hantar action dalam Query String & Body untuk backup
       const url = `${API_URL}?action=${action}`;
       
       const res = await fetch(url, {
         method: "POST",
-        // Guna text/plain untuk elak CORS preflight yang ketat
         headers: { "Content-Type": "text/plain;charset=utf-8" }, 
         body: JSON.stringify({...payload, action: action})
       });
@@ -220,7 +61,7 @@
         return JSON.parse(text);
       } catch (e) {
         console.error("Non-JSON Response:", text);
-        throw new Error("Server Error. Sila semak deployment 'Anyone'.");
+        throw new Error("Ralat Server. Sila semak deployment 'Anyone'.");
       }
     }
 
@@ -250,10 +91,11 @@
       }
     }
 
-    // 2. DASHBOARD INIT
+    // 2. DASHBOARD INIT (FIXED: Guna postData)
     async function initDash(){
       try {
-        // Guna POST untuk tarik data analitik
+        // SEBELUM INI ERROR DI SINI SEBAB GUNA getData
+        // SEKARANG KITA GUNA postData
         const d = await postData('getAnalytics', { state: uProf.state });
         
         if(d.error) { alert("Ralat Data: " + d.error); return; }
@@ -353,13 +195,14 @@
       } catch(e) { alert("Server Error"); btn.disabled=false; }
     }
 
-    // 7. VERIFICATION MODULE
+    // 7. VERIFICATION MODULE (FIXED: Guna postData)
     async function loadPend(){
       const tb=document.getElementById('vBody'); 
       tb.innerHTML='<tr><td colspan="100%" class="text-center p-3"><div class="spinner-border text-primary"></div></td></tr>';
       
       try {
-        // Guna POST untuk tarik data pending
+        // ERROR SEBELUM INI JUGA DI SINI (getData is not defined)
+        // SEKARANG KITA GUNA postData
         const d = await postData('getPending', { state: uProf.state });
         const r=d.rows, h=d.headers;
         
