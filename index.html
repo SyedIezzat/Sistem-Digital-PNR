@@ -42,7 +42,7 @@
     const API_URL = "https://script.google.com/macros/s/AKfycbzu_29jZu-cG7_y-_mq_Pk6iJiFx5tPht71KK-2k_8xV-SDiv3olWqY05ZdiVWJbFP-/exec"; 
     
     // ⚠️ GANTIKAN URL BORANG BANCIAN ANDA DI SINI
-    const BANCIAN_URL = "https://script.google.com/macros/s/AKfycbysNeegvBM-m16DFLHEM-imbcduU5LZG0G3OipMd9YNgrXWYdNCWj9Yu7NnzbvMAyErDw/exec"; // Contoh, sila ganti
+    const BANCIAN_URL = "https://script.google.com/macros/s/AKfycbysNeegvBM-m16DFLHEM-imbcduU5LZG0G3OipMd9YNgrXWYdNCWj9Yu7NnzbvMAyErDw/exec"; 
   </script>
 
   <div id="loginOverlay">
@@ -62,7 +62,8 @@
       <div class="nav-link active" onclick="switchTab('main',this)">
         <i class="bi bi-grid-fill"></i> RUMUSAN DATA
       </div>
-      <div class="nav-link" onclick="switchTab('verify',this)">
+      
+      <div class="nav-link" id="navVerify" style="display:none" onclick="switchTab('verify',this)">
         <i class="bi bi-check-circle-fill"></i> PENGESAHAN DATA
         <span class="badge bg-danger float-end" id="badgePending" style="display:none">0</span>
       </div>
@@ -165,14 +166,43 @@
       try { return JSON.parse(text); } catch (e) { console.error("Non-JSON:", text); throw new Error("Ralat Server. Sila semak deployment 'Anyone'."); }
     }
 
-    // 1. LOGIN
+    // 1. LOGIN (UPDATED: ROLE CHECK)
     async function doLogin(){
       const u=document.getElementById('uid').value, p=document.getElementById('pwd').value, b=document.getElementById('btnLogin'), msg=document.getElementById('loginMsg');
       if(!u || !p) { msg.innerText="Sila isi ID dan Kata Laluan."; return; }
+      
       b.disabled=true; b.innerText="Memproses..."; msg.innerText="";
+      
       try {
         const r = await postData('login', {u, p});
-        if(r.success){ uProf=r; document.getElementById('uDisp').innerText=r.name; document.getElementById('loginOverlay').style.display='none'; initDash(); }
+        
+        if(r.success){ 
+          uProf=r; 
+          document.getElementById('uDisp').innerText=r.name; 
+          document.getElementById('loginOverlay').style.display='none'; 
+          
+          // --- ROLE CHECK LOGIC ---
+          const role = (r.role || "").toString().toUpperCase().trim();
+          const navV = document.getElementById('navVerify');
+          
+          if(role === "ADMIN" || role === "PENYELIA") {
+             navV.style.display = "block"; // Tunjuk menu jika Admin/Penyelia
+             // Auto-check pending badge
+             postData('getPending', { state: uProf.state }).then(d => {
+               if(d && d.rows) {
+                 const c = d.rows.length;
+                 const bg = document.getElementById('badgePending');
+                 bg.innerText = c;
+                 bg.style.display = c ? 'inline' : 'none';
+               }
+             }).catch(()=>{});
+          } else {
+             navV.style.display = "none"; // Sorok jika Staf
+          }
+          // ------------------------
+
+          initDash(); 
+        } 
         else { msg.innerText=r.message || "Login Gagal."; b.disabled=false; b.innerText="LOG MASUK"; }
       } catch(e) { msg.innerText=e.message; b.disabled=false; b.innerText="LOG MASUK"; }
     }
@@ -236,7 +266,7 @@
       } catch(e) { alert("Server Error"); btn.disabled=false; }
     }
 
-    // 5. VERIFY (UPDATED: CLEAN UI & ALERT)
+    // 5. VERIFY
     async function loadPend(){
       const tb=document.getElementById('vBody'); tb.innerHTML='<tr><td colspan="100%" class="text-center p-3"><div class="spinner-border text-primary"></div></td></tr>';
       try {
@@ -263,7 +293,7 @@
           document.getElementById('r-'+r).remove(); 
           const b=document.getElementById('badgePending'); b.innerText=Math.max(0, parseInt(b.innerText)-1); 
           initDash();
-          alert(res.message); // POPUP STATUS EMAIL
+          alert(res.message); 
         } else { alert("Gagal: "+res.message); document.getElementById('r-'+r).style.opacity='1'; }
       } catch(e) { alert("Server Error"); document.getElementById('r-'+r).style.opacity='1'; }
     }
