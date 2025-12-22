@@ -122,6 +122,18 @@
                 </div>
             </div>
 
+            <div class="card mb-4 border-0 shadow-sm" style="background: #e0f2fe;">
+                <div class="card-body d-flex align-items-center p-3">
+                    <div class="bg-white p-2 rounded-circle text-primary me-3 shadow-sm">
+                        <i class="bi bi-robot fs-4"></i>
+                    </div>
+                    <div>
+                        <h6 class="fw-bold text-primary mb-1">Analisis Pintar</h6>
+                        <div id="smartSummary" class="small text-dark">Sedang menganalisis data...</div>
+                    </div>
+                </div>
+            </div>
+
             <div class="row g-3 mb-4">
                 <div class="col-6 col-md-3">
                     <div class="kpi-card">
@@ -231,7 +243,7 @@
     </div>
 
     <script>
-        // ⚠️ SETUP CONFIG (WAJIB ISI)
+        // ⚠️ SETUP CONFIG (PASTIKAN URL BETUL)
         const API_URL = "https://script.google.com/macros/s/AKfycbybYfIRU52AkFgk2wRXguK5Ja9DAjDkbwEy-zG3B8goc1c7UvbrrDhDli4hULaTJ1s/exec";
         const BANCIAN_URL = "https://script.google.com/macros/s/AKfycbysNeegvBM-m16DFLHEM-imbcduU5LZG0G3OipMd9YNgrXWYdNCWj9Yu7NnzbvMAyErDw/exec";
 
@@ -273,7 +285,7 @@
                 }
                 
                 initDash();
-                setInterval(() => { postData('heartbeat', {sid: sessionID}); }, 900000); // 15 min heartbeat
+                setInterval(() => { postData('heartbeat', {sid: sessionID}); }, 900000); 
             } else {
                 msg.innerText = r.message; btn.disabled = false; btn.innerText = "MASUK";
             }
@@ -370,7 +382,23 @@
             updateCharts(pm, km);
             updateMap(pts);
             updateHotspot(hData);
+            genSummary(pm, tt, ts); // <--- INI PANGGILAN ANALISIS PINTAR
             renTab();
+        }
+
+        function genSummary(pm, tt, ts){
+           const el = document.getElementById('smartSummary');
+           if(!el) return;
+           
+           let topP="-", topV=0;
+           Object.entries(pm).forEach(([k,v])=>{if(v>topV){topP=k; topV=v}});
+           if(topP==="-" && ts>0) { topP="Serangan Umum"; topV=ts; }
+
+           const pct = tt>0?((ts/tt)*100).toFixed(1):0;
+           const status = pct > 10 ? "KRITIKAL" : "TERKAWAL";
+           const color = pct > 10 ? "text-danger" : "text-success";
+
+           el.innerHTML = `Musuh utama: <b>${topP}</b> (${topV.toFixed(2)} Ha). Status kawasan: <b class="${color}">${status}</b> (${pct}%).`;
         }
 
         function updateCharts(pm, km) {
@@ -441,18 +469,11 @@
         function downloadDualExcel() {
             if(!fData.length) { alert("Tiada Data"); return; }
             const wb = XLSX.utils.book_new();
-            
-            // Sheet 1: Master
             const md = fData.map(d => ({"Tarikh":d.t, "Negeri":d.n, "Lokasi":d.l, "Tanaman":d.tn, "Luas":d.lt, "Syor":d.s}));
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(md), "Data Utama");
-            
-            // Sheet 2: Detail
             let dd = [];
-            fData.forEach(d => {
-                if(d.p) Object.entries(d.p).forEach(([p,v]) => dd.push({"Lokasi":d.l, "Perosak":p, "Luas":v}));
-            });
+            fData.forEach(d => { if(d.p) Object.entries(d.p).forEach(([p,v]) => dd.push({"Lokasi":d.l, "Perosak":p, "Luas":v})); });
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dd), "Perincian");
-            
             XLSX.writeFile(wb, "PNR_Laporan.xlsx");
         }
 
@@ -475,16 +496,11 @@
             try {
                 const d = await postData('getPending', {state: uProf.state});
                 if(!d.rows || !d.rows.length) { tb.innerHTML='<tr><td colspan="100%" class="text-center p-5 text-muted">Tiada data baru.</td></tr>'; return; }
-                
                 let h = '<th>#</th>'; d.headers.forEach(x => h+=`<th>${x}</th>`); h+='<th>Tindakan</th>';
                 th.innerHTML = h;
-                
                 tb.innerHTML = d.rows.map((r,i) => {
                     let tds = `<td>${i+1}</td>` + r.data.map(c=>`<td>${c}</td>`).join('');
-                    return `<tr>${tds}<td>
-                        <button class="btn btn-sm btn-success me-1" onclick="subVer(${r.row},'APPROVE')">✔</button>
-                        <button class="btn btn-sm btn-danger" onclick="subVer(${r.row},'REJECT')">✘</button>
-                    </td></tr>`;
+                    return `<tr>${tds}<td><button class="btn btn-sm btn-success me-1" onclick="subVer(${r.row},'APPROVE')">✔</button><button class="btn btn-sm btn-danger" onclick="subVer(${r.row},'REJECT')">✘</button></td></tr>`;
                 }).join('');
             } catch(e) { tb.innerHTML='<tr><td colspan="100%" class="text-danger text-center">Ralat</td></tr>'; }
         }
