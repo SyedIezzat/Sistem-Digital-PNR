@@ -363,15 +363,26 @@
                 if(d.ls > 0 && d.d !== "-") hData[d.d] = (hData[d.d]||0) + d.ls;
             });
 
-            document.getElementById('k1').innerText = tt.toFixed(2);
-            document.getElementById('k2').innerText = ts.toFixed(2);
+            // --- BAHAGIAN INI DIUBAH (Guna toLocaleString) ---
+            
+            // k1: Luas Bancian (2 titik perpuluhan + koma)
+            document.getElementById('k1').innerText = tt.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            
+            // k2: Luas Serangan (2 titik perpuluhan + koma)
+            document.getElementById('k2').innerText = ts.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            
+            // k3: Peratus (Kekal toFixed sebab peratus jarang ribu-ribu)
             document.getElementById('k3').innerText = tt>0 ? ((ts/tt)*100).toFixed(1)+"%" : "0%";
-            document.getElementById('k4').innerText = fData.length;
+            
+            // k4: Bilangan Rekod (Integer + koma)
+            document.getElementById('k4').innerText = fData.length.toLocaleString('en-US');
+
+            // -------------------------------------------------
 
             updateCharts(pm, km);
             updateMap(pts);
             updateHotspot(hData);
-            genSummary(pm, tt, ts); // Smart Summary
+            genSummary(pm, tt, ts); 
             renTab();
         }
 
