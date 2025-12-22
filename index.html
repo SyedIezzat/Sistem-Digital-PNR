@@ -41,7 +41,7 @@
 <body>
 
   <script>
-    // ⚠️ PASTE URL WEB APP (DEPLOYMENT TERBARU) DI SINI
+    // ⚠️ PASTE URL WEB APP ANDA DI SINI (Pastikan tiada space di hujung)
     const API_URL = "https://script.google.com/macros/s/AKfycbzu_29jZu-cG7_y-_mq_Pk6iJiFx5tPht71KK-2k_8xV-SDiv3olWqY05ZdiVWJbFP-/exec"; 
     
     // ⚠️ PASTE URL BORANG APPSHEET / GOOGLE FORM DI SINI
@@ -175,8 +175,7 @@
       <div class="chart-container table-responsive" style="max-height:75vh">
           <table class="table table-bordered table-sm small align-middle" style="white-space:nowrap">
               <thead class="table-dark sticky-top" style="top:0;z-index:10">
-                  <tr id="vHead">
-                      </tr>
+                  <tr id="vHead"></tr>
               </thead>
               <tbody id="vBody">
                   <tr><td class="text-center p-5">Sila tunggu...</td></tr>
@@ -218,14 +217,12 @@
           document.getElementById('uDisp').innerText=r.name; 
           document.getElementById('loginOverlay').style.display='none'; 
           
-          // Check Role for Verify Tab
           if(["ADMIN","PENYELIA"].includes((r.role||"").toUpperCase())) {
-             document.getElementById('navVerify').style.display="flex"; // Show tab
-             checkPendingCount(); // Check badge count
+             document.getElementById('navVerify').style.display="flex"; 
+             checkPendingCount(); 
           }
           
-          initDash(); // Load dashboard
-          // HEARTBEAT 15 MIN (SAFE MODE)
+          initDash(); 
           setInterval(() => { postData('heartbeat', {sid: sessionID}); }, 900000); 
 
         } else { 
@@ -248,7 +245,7 @@
             document.getElementById('view-main').style.display = 'block';
         } else if (tab === 'verify'){
             document.getElementById('view-verify').style.display = 'block';
-            loadPend(); // Auto-load verify data
+            loadPend(); 
         }
     }
 
@@ -294,21 +291,37 @@
       pg=1; calcUI();
     }
 
+    // --- 4. SMART ANALYSIS ENGINE (FIXED) ---
     function calcUI(){
       let tt=0, ts=0, pm={}, km={1:0,2:0,3:0,4:0,5:0}, pts=[], hData={};
 
       fData.forEach(d=>{
         tt+=d.lt; ts+=d.ls;
-        if(d.p) Object.entries(d.p).forEach(([k,v])=>{ pm[k]=(pm[k]||0)+parseFloat(v); });
-        if(d.k>0) km[d.k]++;
+        
+        // PENTING: Logic Aggregation Data Perosak
+        if(d.p && Object.keys(d.p).length > 0){ 
+            Object.entries(d.p).forEach(([k,v])=>{ pm[k]=(pm[k]||0)+parseFloat(v); });
+        } else if (d.ls > 0) {
+            // Kalau tiada nama perosak tapi ada luas serangan, label sebagai Umum
+            pm["Serangan Umum"] = (pm["Serangan Umum"]||0) + d.ls;
+        }
+
+        // Logic Tahap (Fallback 0 jika undefined)
+        let lvl = d.k || 0;
+        if(lvl > 0 && lvl <= 5) km[lvl]++;
+        
         if(d.c && d.c.includes(',')) pts.push(d.c.split(',').map(Number));
         if(d.ls > 0 && d.d !== "-") hData[d.d] = (hData[d.d]||0) + d.ls;
       });
 
-      document.getElementById('k1').innerText=tt.toFixed(2); document.getElementById('k2').innerText=ts.toFixed(2);
-      document.getElementById('k3').innerText=tt>0?((ts/tt)*100).toFixed(1)+"%":"0%"; document.getElementById('k4').innerText=fData.length;
+      document.getElementById('k1').innerText=tt.toFixed(2); 
+      document.getElementById('k2').innerText=ts.toFixed(2);
+      document.getElementById('k3').innerText=tt>0?((ts/tt)*100).toFixed(1)+"%":"0%"; 
+      document.getElementById('k4').innerText=fData.length;
       
-      upChart(pm,km); genSummary(pm,tt,ts); genHotspot(hData);
+      upChart(pm,km); 
+      genSummary(pm,tt,ts); 
+      genHotspot(hData);
       
       if(layer) map.removeLayer(layer); 
       if(pts.length) layer=L.layerGroup(pts.map(p=>L.circleMarker(p,{radius:5,color:'red',fillOpacity:0.7,stroke:false}))).addTo(map);
@@ -317,18 +330,22 @@
 
     function renTab(){
       const st=(pg-1)*pSize, dt=fData.slice(st,st+pSize);
-      document.getElementById('tBody').innerHTML = dt.map(d=>`<tr><td>${d.t}</td><td>${d.n}</td><td>${d.l}</td><td>${d.tn}</td><td>${d.lt.toFixed(2)}</td><td class="text-danger fw-bold">${d.ls.toFixed(2)}</td></tr>`).join('');
+      document.getElementById('tBody').innerHTML = dt.length ? dt.map(d=>`<tr><td>${d.t}</td><td>${d.n}</td><td>${d.l}</td><td>${d.tn}</td><td>${d.lt.toFixed(2)}</td><td class="text-danger fw-bold">${d.ls.toFixed(2)}</td></tr>`).join('') : '<tr><td colspan="6" class="text-center text-muted">Tiada data</td></tr>';
       document.getElementById('pgInfo').innerText=`Pg ${pg}/${Math.ceil(fData.length/pSize)||1}`;
     }
     
     function movePg(d){ pg=Math.max(1,Math.min(Math.ceil(fData.length/pSize)||1,pg+d)); renTab(); }
     function fillSel(i,a){ const e=document.getElementById(i); e.innerHTML='<option value="">Semua</option>'; a.forEach(x=>{if(x)e.innerHTML+=`<option value="${x}">${x}</option>`}); }
 
-    // --- 4. CHARTS & EXPORT ---
     function upChart(p,k){
       const tp=Object.entries(p).sort((a,b)=>b[1]-a[1]).slice(0,10);
+      
+      // Jika data perosak kosong, masukkan dummy supaya chart tak crash
+      const labels = tp.length ? tp.map(x=>x[0]) : ['Tiada Data'];
+      const dataVal = tp.length ? tp.map(x=>x[1]) : [0];
+
       if(charts.b)charts.b.destroy(); 
-      charts.b=new Chart(document.getElementById('cBar'),{type:'bar',data:{labels:tp.map(x=>x[0]),datasets:[{label:'Ha',data:tp.map(x=>x[1]),backgroundColor:'#10b981'}]},options:{indexAxis:'y',maintainAspectRatio:false,plugins:{legend:{display:false}}}});
+      charts.b=new Chart(document.getElementById('cBar'),{type:'bar',data:{labels:labels,datasets:[{label:'Ha',data:dataVal,backgroundColor:'#10b981'}]},options:{indexAxis:'y',maintainAspectRatio:false,plugins:{legend:{display:false}}}});
       
       if(charts.p)charts.p.destroy(); 
       charts.p=new Chart(document.getElementById('cPie'),{type:'doughnut',data:{labels:['Tahap 1','2','3','4','5'],datasets:[{data:[km[1]||0,km[2]||0,km[3]||0,km[4]||0,km[5]||0],backgroundColor:['#22c55e','#84cc16','#eab308','#f97316','#ef4444']}]},options:{maintainAspectRatio:false,plugins:{legend:{position:'right'}}}});
@@ -336,15 +353,36 @@
 
     function genSummary(pm, tt, ts){
        const el = document.getElementById('smartSummary');
-       if(!fData.length){ el.innerHTML="Tiada data."; return;}
-       let topP="-", topV=0; Object.entries(pm).forEach(([k,v])=>{if(v>topV){topP=k; topV=v}});
+       if(!fData.length){ el.innerHTML="Tiada data untuk dianalisis."; return;}
+       
+       let topP="-", topV=0; 
+       Object.entries(pm).forEach(([k,v])=>{if(v>topV){topP=k; topV=v}});
+       
+       // Jika masih tiada topP (sebab pm kosong), set default
+       if(topP === "-" && ts > 0) { topP = "Serangan Umum"; topV = ts; }
+
        const pct = tt>0?((ts/tt)*100).toFixed(1):0;
-       el.innerHTML = `<b>Musuh Utama:</b> ${topP} (${topV.toFixed(2)} Ha) | <b>Status:</b> ${pct}% kawasan terjejas.`;
+       
+       el.innerHTML = `
+        <div class="d-flex align-items-center gap-3">
+            <div class="flex-fill border-end pe-3">
+                <small class="text-muted d-block">MUSUH UTAMA</small>
+                <strong class="text-dark">${topP}</strong> 
+                <span class="badge bg-warning text-dark">${topV.toFixed(2)} Ha</span>
+            </div>
+            <div class="flex-fill">
+                <small class="text-muted d-block">STATUS KESELURUHAN</small>
+                <strong class="${pct > 10 ? 'text-danger':'text-success'}">
+                    ${pct}% Serangan
+                </strong>
+                <small>dari ${tt.toFixed(2)} Ha</small>
+            </div>
+        </div>`;
     }
 
     function genHotspot(hData){
        const s = Object.entries(hData).sort((a,b)=>b[1]-a[1]).slice(0,5);
-       document.getElementById('hotspotTable').innerHTML = s.length ? s.map(x=>`<tr><td>${x[0]}</td><td class="text-end fw-bold text-danger">${x[1].toFixed(2)}</td></tr>`).join('') : '<tr><td colspan="2" class="text-center text-muted">Tiada</td></tr>';
+       document.getElementById('hotspotTable').innerHTML = s.length ? s.map(x=>`<tr><td>${x[0]}</td><td class="text-end fw-bold text-danger">${x[1].toFixed(2)}</td></tr>`).join('') : '<tr><td colspan="2" class="text-center text-muted">Tiada Hotspot</td></tr>';
     }
 
     function downloadDualExcel(){
@@ -363,7 +401,7 @@
 
     async function dlPDF(){
        const b=document.querySelector('button[onclick="dlPDF()"]'); b.disabled=true; b.innerHTML='Jana...';
-       const m={ user:uProf.name, negeri:document.getElementById('selNegeri').value||"Semua", dates:`${document.getElementById('dS').value} - ${document.getElementById('dE').value}` };
+       const m={ user:uProf.name, negeri:document.getElementById('selNegeri').value||"Semua", dates:`${document.getElementById('dS').value||'Mula'} - ${document.getElementById('dE').value||'Tamat'}` };
        try { const r = await postData('genPDF', {data: fData, meta: m}); 
              if(r.success) { const a=document.createElement('a'); a.href="data:application/pdf;base64,"+r.base64; a.download=r.filename; a.click(); }
              else { alert("Gagal PDF"); }
@@ -399,7 +437,7 @@
       try {
           const r = await postData('submitVerify', {row: row, act: act, reason: re, name: uProf.name});
           alert(r.message);
-          if(r.success) { loadPend(); checkPendingCount(); }
+          if(r.success) { loadPend(); checkPendingCount(); initDash(); }
       } catch(e) { alert("Ralat."); }
     }
   </script>
