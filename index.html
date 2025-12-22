@@ -239,11 +239,10 @@
                 </div>
             </div>
         </div>
-
     </div>
 
     <script>
-        // ⚠️ SETUP CONFIG (PASTIKAN URL BETUL)
+        // CONFIG
         const API_URL = "https://script.google.com/macros/s/AKfycbybYfIRU52AkFgk2wRXguK5Ja9DAjDkbwEy-zG3B8goc1c7UvbrrDhDli4hULaTJ1s/exec";
         const BANCIAN_URL = "https://script.google.com/macros/s/AKfycbysNeegvBM-m16DFLHEM-imbcduU5LZG0G3OipMd9YNgrXWYdNCWj9Yu7NnzbvMAyErDw/exec";
 
@@ -262,7 +261,7 @@
             } catch(e) { console.error(e); return {success:false, message:"Ralat sambungan."}; }
         }
 
-        // --- AUTHENTICATION ---
+        // --- AUTH ---
         async function doLogin() {
             const u = document.getElementById('uid').value;
             const p = document.getElementById('pwd').value;
@@ -278,7 +277,6 @@
                 document.getElementById('uDisp').innerText = r.name;
                 document.getElementById('loginOverlay').style.display = 'none';
                 
-                // Show Admin Tab
                 if(["ADMIN","PENYELIA"].includes((r.role||"").toUpperCase())) {
                     document.getElementById('navVerify').style.display = "flex";
                     checkPendingCount();
@@ -291,7 +289,7 @@
             }
         }
 
-        // --- NAVIGATION ---
+        // --- NAV ---
         function switchTab(t, el) {
             document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active'));
             if(el) el.classList.add('active');
@@ -312,7 +310,7 @@
             } catch(e){}
         }
 
-        // --- DASHBOARD LOGIC ---
+        // --- DASHBOARD ---
         async function initDash() {
             const d = await postData('getAnalytics', {state: uProf.state});
             if(!d.records) { alert("Tiada Data"); return; }
@@ -355,25 +353,16 @@
 
             fData.forEach(d => {
                 tt += (d.lt||0); ts += (d.ls||0);
-                
-                // Pest
                 if(d.p && Object.keys(d.p).length > 0) Object.entries(d.p).forEach(([k,v]) => pm[k] = (pm[k]||0)+parseFloat(v));
                 else if(d.ls > 0) pm["Umum"] = (pm["Umum"]||0) + d.ls;
-
-                // Level
                 let l = parseInt(d.k)||0; if(l>0 && l<=5) km[l]++;
-
-                // Map
                 if(d.c && d.c.includes(',')) {
                     let p = d.c.split(',').map(Number);
                     if(p.length===2 && !isNaN(p[0])) pts.push(p);
                 }
-
-                // Hotspot
                 if(d.ls > 0 && d.d !== "-") hData[d.d] = (hData[d.d]||0) + d.ls;
             });
 
-            // Update UI
             document.getElementById('k1').innerText = tt.toFixed(2);
             document.getElementById('k2').innerText = ts.toFixed(2);
             document.getElementById('k3').innerText = tt>0 ? ((ts/tt)*100).toFixed(1)+"%" : "0%";
@@ -382,52 +371,37 @@
             updateCharts(pm, km);
             updateMap(pts);
             updateHotspot(hData);
-            genSummary(pm, tt, ts); // <--- INI PANGGILAN ANALISIS PINTAR
+            genSummary(pm, tt, ts); // Smart Summary
             renTab();
         }
 
-       function genSummary(pm, tt, ts) {
+        // --- FUNGSI ANALISIS PINTAR TERPERINCI ---
+        function genSummary(pm, tt, ts) {
            const el = document.getElementById('smartSummary');
            if(!el) return;
 
-           // 1. LOKASI (Negeri/Daerah)
-           // Kita ambil dari Dropdown atau detect dari data jika dropdown "Semua"
+           // 1. Lokasi
            let loc = document.getElementById('selNegeri').value;
-           if(loc === "") {
-               // Jika user pilih "Semua", kita tulis "Malaysia" atau "Semua Negeri"
-               loc = "Semua Negeri"; 
-           }
+           if(loc === "") loc = "Semua Negeri";
 
-           // 2. TANAMAN PALING TERJEJAS
-           // Kita kena loop balik fData untuk cari tanaman mana paling banyak luas serangan
+           // 2. Tanaman Paling Terjejas
            let cropMap = {};
-           fData.forEach(d => {
-               if(d.ls > 0) cropMap[d.tn] = (cropMap[d.tn] || 0) + d.ls;
-           });
-           let topCrop = "-"; let topCropVal = 0;
-           Object.entries(cropMap).forEach(([k,v]) => {
-               if(v > topCropVal) { topCrop = k; topCropVal = v; }
-           });
+           fData.forEach(d => { if(d.ls > 0) cropMap[d.tn] = (cropMap[d.tn] || 0) + d.ls; });
+           let topCrop = "-", topCropVal = 0;
+           Object.entries(cropMap).forEach(([k,v]) => { if(v > topCropVal) { topCrop = k; topCropVal = v; } });
 
-           // 3. MUSUH UTAMA
+           // 3. Musuh Utama
            let topP="-", topV=0;
            Object.entries(pm).forEach(([k,v])=>{if(v>topV){topP=k; topV=v}});
            if(topP==="-" && ts>0) { topP="Serangan Umum"; topV=ts; }
 
-           // 4. INDEKS KETERUKAN (PURATA)
-           // Kira purata tahap (1-5) dari semua data yang ada serangan
-           let totalScore = 0; let count = 0;
-           fData.forEach(d => {
-               let level = parseInt(d.k) || 0;
-               if(level > 0 && d.ls > 0){ totalScore += level; count++; }
-           });
+           // 4. Purata Indeks Keterukan
+           let totalScore = 0, count = 0;
+           fData.forEach(d => { let level = parseInt(d.k) || 0; if(level > 0 && d.ls > 0){ totalScore += level; count++; } });
            let avgIdx = count > 0 ? (totalScore / count).toFixed(1) : "0.0";
            
-           // Tafsir Indeks (1-5)
-           let tafsir = "Tiada";
-           let color = "text-success";
+           let tafsir = "Tiada", color = "text-success";
            let idxNum = parseFloat(avgIdx);
-
            if(idxNum > 0) {
                if(idxNum <= 1.9) { tafsir = "Sangat Ringan"; color = "text-success"; }
                else if(idxNum <= 2.9) { tafsir = "Ringan"; color = "text-success"; }
@@ -436,32 +410,25 @@
                else { tafsir = "Sangat Teruk"; color = "text-danger fw-bold"; }
            }
 
-           // 5. PERATUS SERANGAN
            const pct = tt > 0 ? ((ts/tt)*100).toFixed(2) : "0.00";
 
-           // --- PAPARAN HTML (LAYOUT BARU) ---
            if(ts === 0) {
-               el.innerHTML = `<span class="text-success"><i class="bi bi-check-circle"></i> Tiada rekod serangan dilaporkan bagi tetapan ini.</span>`;
-               return;
+               el.innerHTML = `<span class="text-success"><i class="bi bi-check-circle"></i> Tiada rekod serangan dilaporkan.</span>`;
+           } else {
+               el.innerHTML = `
+                <div style="line-height: 1.6;">
+                    <i class="bi bi-geo-alt-fill text-danger"></i> <b>${loc}</b>: 
+                    Tanaman <b class="text-primary">${topCrop}</b> paling terkesan akibat serangan <b>${topP}</b>.
+                    <br>
+                    <i class="bi bi-exclamation-circle-fill text-warning"></i> Luas Serangan: <b>${ts.toFixed(2)} Ha</b> (${pct}%)
+                    <br>
+                    <i class="bi bi-bar-chart-fill text-secondary"></i> Indeks Keterukan: <b>${avgIdx}</b> (<span class="${color}">${tafsir}</span>)
+                </div>
+               `;
            }
-
-           el.innerHTML = `
-            <div style="line-height: 1.6;">
-                <i class="bi bi-geo-alt-fill text-danger"></i> <b>${loc}</b>: 
-                Tanaman <b class="text-primary">${topCrop}</b> paling terkesan akibat serangan <b>${topP}</b>.
-                <br>
-                <i class="bi bi-exclamation-circle-fill text-warning"></i> Luas Serangan: <b>${ts.toFixed(2)} Ha</b> (${pct}%)
-                <br>
-                <i class="bi bi-bar-chart-fill text-secondary"></i> Indeks Keterukan: <b>${avgIdx}</b> (<span class="${color}">${tafsir}</span>)
-            </div>
-           `;
-        }
-
-           el.innerHTML = `Musuh utama: <b>${topP}</b> (${topV.toFixed(2)} Ha). Status kawasan: <b class="${color}">${status}</b> (${pct}%).`;
         }
 
         function updateCharts(pm, km) {
-            // Bar Chart
             const tp = Object.entries(pm).sort((a,b)=>b[1]-a[1]).slice(0,10);
             if(charts.b) charts.b.destroy();
             charts.b = new Chart(document.getElementById('cBar'), {
@@ -473,7 +440,6 @@
                 options: { indexAxis: 'y', maintainAspectRatio: false, plugins:{legend:{display:false}} }
             });
 
-            // Pie Chart
             if(charts.p) charts.p.destroy();
             charts.p = new Chart(document.getElementById('cPie'), {
                 type: 'doughnut',
