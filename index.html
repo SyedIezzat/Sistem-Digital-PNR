@@ -40,18 +40,14 @@
 </head>
 <body>
 
-  <script>
-    // URL WEB APP TUAN (SUDAH DIMASUKKAN)
-    const API_URL = "https://script.google.com/macros/s/AKfycbybYfIRU52AkFgk2wRXguK5Ja9DAjDkbwEy-zG3B8goc1c7UvbrrDhDli4hULaTJ1s/exec";
-    const BANCIAN_URL = "https://script.google.com/macros/s/AKfycbysNeegvBM-m16DFLHEM-imbcduU5LZG0G3OipMd9YNgrXWYdNCWj9Yu7NnzbvMAyErDw/exec";
-  </script>
-
   <div id="loginOverlay">
     <div class="card p-4 shadow text-center" style="width: 350px;">
       <h4 class="fw-bold text-success mb-3">PNR Digital</h4>
       <input type="text" id="uid" class="form-control mb-2" placeholder="ID Pengguna">
       <input type="password" id="pwd" class="form-control mb-3" placeholder="Kata Laluan">
-      <button onclick="doLogin()" class="btn btn-success w-100 fw-bold" id="btnLogin">LOG MASUK</button>
+      
+      <button type="button" onclick="doLogin()" class="btn btn-success w-100 fw-bold" id="btnLogin">LOG MASUK</button>
+      
       <small id="loginMsg" class="text-danger d-block mt-2"></small>
     </div>
   </div>
@@ -66,7 +62,7 @@
       </div>
     </nav>
     <hr>
-    <a href="javascript:void(0)" onclick="window.open(BANCIAN_URL, '_blank')" class="btn btn-success btn-sm w-100 mb-3 fw-bold shadow-sm"><i class="bi bi-plus-circle"></i> Tambah Data</a>
+    <a href="javascript:void(0)" onclick="bukaBorang()" class="btn btn-success btn-sm w-100 mb-3 fw-bold shadow-sm"><i class="bi bi-plus-circle"></i> Tambah Data</a>
     
     <div id="filterSec">
       <small class="fw-bold text-muted px-2">TAPISAN DATA</small>
@@ -118,6 +114,7 @@
 
       <div class="row g-3 mb-4">
         <div class="col-lg-8"><div class="chart-container" style="height:300px; position:relative;">
+            <div id="loadChart" style="display:none; position:absolute; inset:0; background:rgba(255,255,255,0.8); z-index:10; justify-content:center; align-items:center;"><span class="spinner-border text-primary"></span></div>
             <h6 class="fw-bold mb-3">Serangan Tertinggi (Ha)</h6>
             <div style="height:230px"><canvas id="cBar"></canvas></div>
         </div></div>
@@ -166,40 +163,104 @@
   </div>
 
   <script>
+    // --- 1. CONFIGURATION ---
+    const API_URL = "https://script.google.com/macros/s/AKfycbybYfIRU52AkFgk2wRXguK5Ja9DAjDkbwEy-zG3B8goc1c7UvbrrDhDli4hULaTJ1s/exec"; 
+    const BANCIAN_URL = "https://script.google.com/macros/s/AKfycbysNeegvBM-m16DFLHEM-imbcduU5LZG0G3OipMd9YNgrXWYdNCWj9Yu7NnzbvMAyErDw/exec"; 
+
+    // --- 2. GLOBAL VARS ---
     let mData=[], fData=[], uProf=null, charts={}, map=null, layer=null, pg=1, pSize=10, sessionID=null;
 
-    async function postData(a, p) {
-      try {
-        const r = await fetch(`${API_URL}?action=${a}`, { method:"POST", body:JSON.stringify({...p, action:a}) });
-        return JSON.parse(await r.text());
-      } catch (e) { console.error(e); return {success:false, message:"Ralat Sambungan"}; }
-    }
-
-    async function doLogin(){
-      const u=document.getElementById('uid').value, p=document.getElementById('pwd').value;
-      const b=document.getElementById('btnLogin'), msg=document.getElementById('loginMsg');
-      
-      if(!u || !p) { msg.innerText="Sila isi semua."; return; }
-      b.disabled=true; b.innerText="Proses..."; msg.innerText="";
-      
-      const r = await postData('login', {u, p});
-      if(r.success){ 
-        uProf=r; sessionID=r.sid;
-        document.getElementById('uDisp').innerText=r.name; 
-        document.getElementById('loginOverlay').style.display='none'; 
-        if(["ADMIN","PENYELIA"].includes((r.role||"").toUpperCase())) {
-           document.getElementById('navVerify').style.display="flex"; checkPendingCount(); 
+    // --- 3. CORE FUNCTION (FIXED) ---
+    async function postData(action, payload) {
+        try {
+            // URL Mesti Bersih
+            const url = API_URL.trim() + "?action=" + action;
+            
+            const res = await fetch(url, { 
+                method: "POST", 
+                headers: { "Content-Type": "text/plain" }, // PENTING: Untuk elak CORS Block
+                body: JSON.stringify({...payload, action: action}) 
+            });
+            
+            const text = await res.text();
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                console.error("JSON Error:", text);
+                return {success: false, message: "Ralat format data dari server."};
+            }
+        } catch (e) { 
+            console.error("Network Error:", e); 
+            return {success: false, message: "Masalah sambungan internet."}; 
         }
-        initDash(); 
-        setInterval(() => { postData('heartbeat', {sid: sessionID}); }, 900000); 
-      } else { 
-        msg.innerText=r.message; b.disabled=false; b.innerText="LOG MASUK"; 
-      }
     }
 
+    // --- 4. AUTHENTICATION ---
+    async function doLogin(){
+        const u = document.getElementById('uid').value;
+        const p = document.getElementById('pwd').value;
+        const btn = document.getElementById('btnLogin');
+        const msg = document.getElementById('loginMsg');
+        
+        if(!u || !p) { msg.innerText = "Sila isi semua."; return; }
+        
+        btn.disabled = true; 
+        btn.innerText = "Memproses..."; 
+        msg.innerText = "";
+        
+        const r = await postData('login', {u, p});
+        
+        if(r.success){ 
+            uProf = r; 
+            sessionID = r.sid;
+            document.getElementById('uDisp').innerText = r.name; 
+            document.getElementById('loginOverlay').style.display = 'none'; 
+            
+            if(["ADMIN","PENYELIA"].includes((r.role||"").toUpperCase())) {
+                document.getElementById('navVerify').style.display = "flex"; 
+                checkPendingCount(); 
+            }
+            
+            initDash(); 
+            // Heartbeat setiap 15 minit
+            setInterval(() => { postData('heartbeat', {sid: sessionID}); }, 900000); 
+        } else { 
+            msg.innerText = r.message; 
+            btn.disabled = false; 
+            btn.innerText = "LOG MASUK"; 
+        }
+    }
+
+    function bukaBorang() {
+        window.open(BANCIAN_URL, '_blank');
+    }
+
+    // --- 5. NAVIGATION ---
+    function switchTab(t, el){
+        document.querySelectorAll('.nav-link').forEach(x => x.classList.remove('active'));
+        if(el) el.classList.add('active');
+        document.getElementById('view-main').style.display = t==='main'?'block':'none';
+        document.getElementById('view-verify').style.display = t==='verify'?'block':'none';
+        if(t==='verify') loadPend();
+        if(t==='main' && map) setTimeout(() => { map.invalidateSize(); }, 200);
+    }
+
+    async function checkPendingCount(){
+        try {
+            const d = await postData('getPending', {state: uProf.state});
+            const b = document.getElementById('badgePending');
+            if(d.rows && d.rows.length > 0){ b.innerText = d.rows.length; b.style.display = 'inline'; } 
+            else { b.style.display = 'none'; }
+        } catch(e){}
+    }
+
+    // --- 6. DASHBOARD LOGIC ---
     async function initDash(){
+      document.getElementById('loadChart').style.display = 'flex';
       const d = await postData('getAnalytics', { state: uProf.state });
-      if(!d.records) { alert("Tiada Data"); return; }
+      document.getElementById('loadChart').style.display = 'none';
+
+      if(!d.records) { alert("Tiada Data Diterima."); return; }
       
       mData=d.records;
       fillSel('selNegeri',d.filters.negeri); fillSel('selTanaman',d.filters.tanaman); fillSel('selKategori',d.filters.kategori);
@@ -229,18 +290,19 @@
           
           fData.forEach(d=>{
             tt+=d.lt||0; ts+=d.ls||0;
-            // PEST LOGIC
+            // PEST
             if(d.p && Object.keys(d.p).length > 0){ Object.entries(d.p).forEach(([k,v])=>{ pm[k]=(pm[k]||0)+parseFloat(v); }); } 
             else if (d.ls > 0) { pm["Umum"] = (pm["Umum"]||0) + d.ls; }
             
-            // LEVEL LOGIC
+            // LEVEL
             let l = parseInt(d.k) || 0; if(l>0 && l<=5) km[l]++;
             
-            // MAP LOGIC
+            // MAP
             if(d.c && typeof d.c === 'string' && d.c.includes(',')) {
                 let parts = d.c.split(',').map(n => parseFloat(n.trim()));
                 if(parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) pts.push(parts);
             }
+            // HOTSPOT
             if(d.ls > 0 && d.d !== "-") hData[d.d] = (hData[d.d]||0) + d.ls;
           });
     
@@ -249,7 +311,9 @@
           document.getElementById('k3').innerText=tt>0?((ts/tt)*100).toFixed(1)+"%":"0%"; 
           document.getElementById('k4').innerText=fData.length;
           
-          upChart(pm,km); genSummary(pm,tt,ts); genHotspot(hData);
+          upChart(pm,km); 
+          genSummary(pm,tt,ts); 
+          genHotspot(hData);
           
           if(layer) map.removeLayer(layer); 
           if(pts.length) {
@@ -321,27 +385,10 @@
        } catch(e){ alert("Error PDF"); } b.disabled=false; b.innerHTML='<i class="bi bi-file-earmark-pdf-fill"></i> PDF';
     }
 
-    function switchTab(t, el){
-        document.querySelectorAll('.nav-link').forEach(x => x.classList.remove('active'));
-        if(el) el.classList.add('active');
-        document.getElementById('view-main').style.display = t==='main'?'block':'none';
-        document.getElementById('view-verify').style.display = t==='verify'?'block':'none';
-        if(t==='verify') loadPend();
-        if(t==='main' && map) setTimeout(() => { map.invalidateSize(); }, 200);
-    }
-
-    async function checkPendingCount(){
-        try {
-            const d = await postData('getPending', {state: uProf.state});
-            const b = document.getElementById('badgePending');
-            if(d.rows && d.rows.length > 0){ b.innerText = d.rows.length; b.style.display = 'inline'; } 
-            else { b.style.display = 'none'; }
-        } catch(e){}
-    }
-
+    // --- 7. VERIFICATION MODULE ---
     async function loadPend(){
        const tb = document.getElementById('vBody'), th = document.getElementById('vHead');
-       tb.innerHTML = '<tr><td colspan="100%" class="text-center p-5"><span class="spinner-border"></span></td></tr>'; th.innerHTML='';
+       tb.innerHTML = '<tr><td colspan="100%" class="text-center p-5"><span class="spinner-border text-primary"></span></td></tr>'; th.innerHTML='';
        try {
            const d = await postData('getPending', {state: uProf.state});
            if(!d.rows || d.rows.length === 0){ tb.innerHTML = '<tr><td colspan="100%" class="text-center p-5 text-muted">Tiada data baru.</td></tr>'; return; }
