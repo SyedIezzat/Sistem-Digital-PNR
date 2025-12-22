@@ -386,17 +386,76 @@
             renTab();
         }
 
-        function genSummary(pm, tt, ts){
+       function genSummary(pm, tt, ts) {
            const el = document.getElementById('smartSummary');
            if(!el) return;
-           
+
+           // 1. LOKASI (Negeri/Daerah)
+           // Kita ambil dari Dropdown atau detect dari data jika dropdown "Semua"
+           let loc = document.getElementById('selNegeri').value;
+           if(loc === "") {
+               // Jika user pilih "Semua", kita tulis "Malaysia" atau "Semua Negeri"
+               loc = "Semua Negeri"; 
+           }
+
+           // 2. TANAMAN PALING TERJEJAS
+           // Kita kena loop balik fData untuk cari tanaman mana paling banyak luas serangan
+           let cropMap = {};
+           fData.forEach(d => {
+               if(d.ls > 0) cropMap[d.tn] = (cropMap[d.tn] || 0) + d.ls;
+           });
+           let topCrop = "-"; let topCropVal = 0;
+           Object.entries(cropMap).forEach(([k,v]) => {
+               if(v > topCropVal) { topCrop = k; topCropVal = v; }
+           });
+
+           // 3. MUSUH UTAMA
            let topP="-", topV=0;
            Object.entries(pm).forEach(([k,v])=>{if(v>topV){topP=k; topV=v}});
            if(topP==="-" && ts>0) { topP="Serangan Umum"; topV=ts; }
 
-           const pct = tt>0?((ts/tt)*100).toFixed(1):0;
-           const status = pct > 10 ? "KRITIKAL" : "TERKAWAL";
-           const color = pct > 10 ? "text-danger" : "text-success";
+           // 4. INDEKS KETERUKAN (PURATA)
+           // Kira purata tahap (1-5) dari semua data yang ada serangan
+           let totalScore = 0; let count = 0;
+           fData.forEach(d => {
+               let level = parseInt(d.k) || 0;
+               if(level > 0 && d.ls > 0){ totalScore += level; count++; }
+           });
+           let avgIdx = count > 0 ? (totalScore / count).toFixed(1) : "0.0";
+           
+           // Tafsir Indeks (1-5)
+           let tafsir = "Tiada";
+           let color = "text-success";
+           let idxNum = parseFloat(avgIdx);
+
+           if(idxNum > 0) {
+               if(idxNum <= 1.9) { tafsir = "Sangat Ringan"; color = "text-success"; }
+               else if(idxNum <= 2.9) { tafsir = "Ringan"; color = "text-success"; }
+               else if(idxNum <= 3.9) { tafsir = "Sederhana"; color = "text-warning"; }
+               else if(idxNum <= 4.5) { tafsir = "Teruk"; color = "text-danger"; }
+               else { tafsir = "Sangat Teruk"; color = "text-danger fw-bold"; }
+           }
+
+           // 5. PERATUS SERANGAN
+           const pct = tt > 0 ? ((ts/tt)*100).toFixed(2) : "0.00";
+
+           // --- PAPARAN HTML (LAYOUT BARU) ---
+           if(ts === 0) {
+               el.innerHTML = `<span class="text-success"><i class="bi bi-check-circle"></i> Tiada rekod serangan dilaporkan bagi tetapan ini.</span>`;
+               return;
+           }
+
+           el.innerHTML = `
+            <div style="line-height: 1.6;">
+                <i class="bi bi-geo-alt-fill text-danger"></i> <b>${loc}</b>: 
+                Tanaman <b class="text-primary">${topCrop}</b> paling terkesan akibat serangan <b>${topP}</b>.
+                <br>
+                <i class="bi bi-exclamation-circle-fill text-warning"></i> Luas Serangan: <b>${ts.toFixed(2)} Ha</b> (${pct}%)
+                <br>
+                <i class="bi bi-bar-chart-fill text-secondary"></i> Indeks Keterukan: <b>${avgIdx}</b> (<span class="${color}">${tafsir}</span>)
+            </div>
+           `;
+        }
 
            el.innerHTML = `Musuh utama: <b>${topP}</b> (${topV.toFixed(2)} Ha). Status kawasan: <b class="${color}">${status}</b> (${pct}%).`;
         }
