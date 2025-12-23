@@ -505,11 +505,33 @@
         function downloadDualExcel() {
             if(!fData.length) { alert("Tiada Data"); return; }
             const wb = XLSX.utils.book_new();
-            const md = fData.map(d => ({"Tarikh":d.t, "Negeri":d.n, "Lokasi":d.l, "Tanaman":d.tn, "Luas":d.lt, "Syor":d.s}));
+            
+            // Sheet 1: Data Utama (Tambah ID di depan)
+            const md = fData.map(d => ({
+                "ID": d.id, // <--- ID KEMBALI!
+                "Tarikh": d.t, 
+                "Negeri": d.n, 
+                "Lokasi": d.l, 
+                "Tanaman": d.tn, 
+                "Luas": d.lt, 
+                "Syor": d.s
+            }));
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(md), "Data Utama");
+            
+            // Sheet 2: Perincian (Tambah ID di depan)
             let dd = [];
-            fData.forEach(d => { if(d.p) Object.entries(d.p).forEach(([p,v]) => dd.push({"Lokasi":d.l, "Perosak":p, "Luas":v})); });
+            fData.forEach(d => {
+                if(d.p) Object.entries(d.p).forEach(([p,v]) => {
+                    dd.push({
+                        "ID": d.id, // <--- ID KEMBALI!
+                        "Lokasi": d.l, 
+                        "Perosak": p, 
+                        "Luas": v
+                    });
+                });
+            });
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dd), "Perincian");
+            
             XLSX.writeFile(wb, "PNR_Laporan.xlsx");
         }
 
