@@ -501,100 +501,102 @@
         }
 
         // --- EXPORT & VERIFY ---
-     async function downloadDualExcel() {
-    if (!fData.length) { alert("Tiada data!"); return; }
+    async function downloadDualExcel() {
+            if (!fData.length) { alert("Tiada data!"); return; }
 
-    // 1. Setup Workbook Baru (Guna ExcelJS)
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('Laporan Penuh');
+            const workbook = new ExcelJS.Workbook();
+            const worksheet = workbook.addWorksheet('Laporan Penuh');
 
-    // 2. Setup Columns (Header)
-    worksheet.columns = [
-        { header: 'ID', key: 'id', width: 6 },
-        { header: 'Tarikh', key: 't', width: 12 },
-        { header: 'Negeri', key: 'n', width: 15 },
-        { header: 'Daerah', key: 'd', width: 15 },
-        { header: 'Lokasi', key: 'l', width: 20 },
-        { header: 'Tanaman', key: 'tn', width: 15 },
-        { header: 'Luas Bancian (Ha)', key: 'lt', width: 15 },
-        { header: 'Tahap', key: 'k', width: 8 },
-        { header: 'Syor', key: 's', width: 30 },
-        { header: 'Perosak', key: 'p', width: 20 },         // Hujung
-        { header: 'Luas Serangan (Ha)', key: 'ls', width: 18 } // Hujung
-    ];
+            // 1. SUSUNAN KOLUM BARU
+            // Tahap (k) dipindahkan ke kumpulan kanan (Dynamic)
+            worksheet.columns = [
+                { header: 'ID', key: 'id', width: 6 },
+                { header: 'Tarikh', key: 't', width: 12 },
+                { header: 'Negeri', key: 'n', width: 15 },
+                { header: 'Daerah', key: 'd', width: 15 },
+                { header: 'Lokasi', key: 'l', width: 20 },
+                { header: 'Koordinat', key: 'c', width: 22 },
+                { header: 'Tanaman', key: 'tn', width: 15 },
+                { header: 'Luas Bancian (Ha)', key: 'lt', width: 15 },
+                { header: 'Syor', key: 's', width: 30 },            // Syor kekal di Static (Merged)
+                { header: 'Perosak', key: 'p', width: 20 },         // Dinamik 1
+                { header: 'Tahap', key: 'k', width: 8 },            // Dinamik 2 (Dah pindah sini)
+                { header: 'Luas Serangan (Ha)', key: 'ls', width: 18 } // Dinamik 3
+            ];
 
-    // Style Header (Bold & Center)
-    worksheet.getRow(1).font = { bold: true };
-    worksheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
-    worksheet.getRow(1).eachCell((cell) => {
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } }; // Kelabu sikit
-        cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
-    });
-
-    let rowIndex = 2; // Data mula baris 2
-
-    // 3. Masukkan Data
-    fData.forEach(d => {
-        let pestEntries = (d.p && Object.keys(d.p).length > 0) ? Object.entries(d.p) : [["TIADA", 0]];
-        let startRow = rowIndex;
-
-        pestEntries.forEach(([pName, pArea]) => {
-            const row = worksheet.getRow(rowIndex);
-            row.values = {
-                id: d.id,
-                t: d.t,
-                n: d.n,
-                d: d.d,
-                l: d.l,
-                tn: d.tn,
-                lt: parseFloat(d.lt),
-                k: d.k,
-                s: d.s,
-                p: pName,
-                ls: parseFloat(pArea)
-            };
-            
-            // Letak border untuk setiap sel
-            row.eachCell({ includeEmpty: true }, (cell) => {
+            // Style Header
+            worksheet.getRow(1).font = { bold: true };
+            worksheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
+            worksheet.getRow(1).eachCell((cell) => {
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
                 cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
             });
-            
-            rowIndex++;
-        });
 
-        // 4. Logik Merge & Center
-        if (pestEntries.length > 1) {
-            let endRow = rowIndex - 1;
-            
-            // Kolum 1 (ID) hingga 9 (Syor) akan di-merge
-            // ExcelJS guna nombor kolum (1-based index)
-            for (let c = 1; c <= 9; c++) {
-                worksheet.mergeCells(startRow, c, endRow, c);
-            }
+            let rowIndex = 2;
+
+            fData.forEach(d => {
+                let pestEntries = (d.p && Object.keys(d.p).length > 0) ? Object.entries(d.p) : [["TIADA", 0]];
+                let startRow = rowIndex;
+
+                pestEntries.forEach(([pName, pArea]) => {
+                    const row = worksheet.getRow(rowIndex);
+                    row.values = {
+                        id: d.id,
+                        t: d.t,
+                        n: d.n,
+                        d: d.d,
+                        l: d.l,
+                        c: d.c || "-",
+                        tn: d.tn,
+                        lt: parseFloat(d.lt),
+                        s: d.s,               // Syor di kiri
+                        p: pName,             // Perosak di kanan
+                        k: d.k,               // Tahap di kanan (ikut baris perosak)
+                        ls: parseFloat(pArea) // Luas di kanan
+                    };
+                    
+                    // Border
+                    row.eachCell({ includeEmpty: true }, (cell) => {
+                        cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+                    });
+                    
+                    rowIndex++;
+                });
+
+                // 2. LOGIK MERGE (Hanya Merge Kolum Statik)
+                if (pestEntries.length > 1) {
+                    let endRow = rowIndex - 1;
+                    
+                    // Merge dari Kolum 1 (ID) hingga 9 (Syor) SAHAJA.
+                    // Kolum 10 (Perosak), 11 (Tahap), 12 (Luas Serangan) TIDAK di-merge.
+                    for (let c = 1; c <= 9; c++) {
+                        worksheet.mergeCells(startRow, c, endRow, c);
+                    }
+                }
+
+                // 3. LOGIK ALIGNMENT
+                for (let r = startRow; r < rowIndex; r++) {
+                    // Kumpulan Statik (Kiri) - Semua Center
+                    for (let c = 1; c <= 9; c++) { 
+                        worksheet.getCell(r, c).alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+                    }
+                    
+                    // Kumpulan Dinamik (Kanan)
+                    worksheet.getCell(r, 10).alignment = { vertical: 'middle', horizontal: 'left' };   // Perosak (Kiri sikit)
+                    worksheet.getCell(r, 11).alignment = { vertical: 'middle', horizontal: 'center' }; // Tahap (Tengah)
+                    worksheet.getCell(r, 12).alignment = { vertical: 'middle', horizontal: 'center' }; // Luas Serangan (Tengah)
+                }
+            });
+
+            const buffer = await workbook.xlsx.writeBuffer();
+            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const url = window.URL.createObjectURL(blob);
+            const anchor = document.createElement('a');
+            anchor.href = url;
+            anchor.download = 'PNR_Laporan_Lengkap.xlsx';
+            anchor.click();
+            window.URL.revokeObjectURL(url);
         }
-
-        // 5. Apply Alignment (Center) untuk Kolum Statik (Kiri)
-        // Kita set alignment untuk semua baris dari startRow ke endRow bagi kolum kiri
-        for (let r = startRow; r < rowIndex; r++) {
-            for (let c = 1; c <= 9; c++) { // Kolum 1-9 (Statik)
-                worksheet.getCell(r, c).alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
-            }
-            // Kolum 10-11 (Perosak/Luas) kita biar default (atau center juga jika mahu)
-            worksheet.getCell(r, 10).alignment = { vertical: 'middle', horizontal: 'left' };
-            worksheet.getCell(r, 11).alignment = { vertical: 'middle', horizontal: 'center' };
-        }
-    });
-
-    // 6. Download File
-    const buffer = await workbook.xlsx.writeBuffer();
-    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    const url = window.URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = 'PNR_Laporan_Tunggal.xlsx';
-    anchor.click();
-    window.URL.revokeObjectURL(url);
-}
         async function dlPDF() {
             const btn = document.querySelector('button[onclick="dlPDF()"]');
             btn.innerHTML = "Jana..."; btn.disabled = true;
