@@ -501,14 +501,13 @@
         }
 
         // --- EXPORT & VERIFY ---
-    async function downloadDualExcel() {
+   async function downloadDualExcel() {
             if (!fData.length) { alert("Tiada data!"); return; }
 
             const workbook = new ExcelJS.Workbook();
             const worksheet = workbook.addWorksheet('Laporan Penuh');
 
-            // 1. SUSUNAN KOLUM BARU
-            // Tahap (k) dipindahkan ke kumpulan kanan (Dynamic)
+            // 1. SETUP KOLUM (15 Kolum Semuanya)
             worksheet.columns = [
                 { header: 'ID', key: 'id', width: 6 },
                 { header: 'Tarikh', key: 't', width: 12 },
@@ -516,12 +515,18 @@
                 { header: 'Daerah', key: 'd', width: 15 },
                 { header: 'Lokasi', key: 'l', width: 20 },
                 { header: 'Koordinat', key: 'c', width: 22 },
-                { header: 'Tanaman', key: 'tn', width: 15 },
-                { header: 'Luas Bancian (Ha)', key: 'lt', width: 15 },
-                { header: 'Syor', key: 's', width: 30 },            // Syor kekal di Static (Merged)
-                { header: 'Perosak', key: 'p', width: 20 },         // Dinamik 1
-                { header: 'Tahap', key: 'k', width: 8 },            // Dinamik 2 (Dah pindah sini)
-                { header: 'Luas Serangan (Ha)', key: 'ls', width: 18 } // Dinamik 3
+                { header: 'Kategori', key: 'kt', width: 15 },       // <--- 7. Kategori (Merge)
+                { header: 'Tanaman', key: 'tn', width: 15 },        // <--- 8. Tanaman (Merge)
+                { header: 'Luas Bancian (Ha)', key: 'lt', width: 15 }, // <--- 9. Luas Bancian (Merge)
+                { header: 'Syor Kawalan', key: 's', width: 25 },            // <--- 10. Syor (Merge)
+                { header: 'Pegawai Yang Mengisi Data', key: 'pg', width: 20 },        // <--- 11. Pegawai (Merge)
+                
+                // --- PEMISAH ZON MERGE ---
+                
+                { header: 'Nama Perosak', key: 'p', width: 20 },         // <--- 12. Perosak
+                { header: 'Keterukan Serangan', key: 'k', width: 8 },            // <--- 13. Tahap
+                { header: 'Luas Serangan (Ha)', key: 'ls', width: 18 }, // <--- 14. Luas Serangan
+                { header: '% Serangan', key: 'pct', width: 12 }     // <--- 15. Peratus (Baru)
             ];
 
             // Style Header
@@ -537,8 +542,14 @@
             fData.forEach(d => {
                 let pestEntries = (d.p && Object.keys(d.p).length > 0) ? Object.entries(d.p) : [["TIADA", 0]];
                 let startRow = rowIndex;
+                let luasTanam = parseFloat(d.lt) || 0;
 
                 pestEntries.forEach(([pName, pArea]) => {
+                    let luasSerang = parseFloat(pArea) || 0;
+                    
+                    // Kira Peratus: (Luas Serang / Luas Tanam) * 100
+                    let pctVal = (luasTanam > 0) ? ((luasSerang / luasTanam) * 100).toFixed(2) + '%' : "0%";
+
                     const row = worksheet.getRow(rowIndex);
                     row.values = {
                         id: d.id,
@@ -547,12 +558,15 @@
                         d: d.d,
                         l: d.l,
                         c: d.c || "-",
+                        kt: d.kt || "-",    // Kategori
                         tn: d.tn,
-                        lt: parseFloat(d.lt),
-                        s: d.s,               // Syor di kiri
-                        p: pName,             // Perosak di kanan
-                        k: d.k,               // Tahap di kanan (ikut baris perosak)
-                        ls: parseFloat(pArea) // Luas di kanan
+                        lt: luasTanam,
+                        s: d.s,
+                        pg: d.pg || "-",    // Pegawai
+                        p: pName,
+                        k: d.k,
+                        ls: luasSerang,
+                        pct: pctVal         // Nilai Peratus
                     };
                     
                     // Border
@@ -563,28 +577,27 @@
                     rowIndex++;
                 });
 
-                // 2. LOGIK MERGE (Hanya Merge Kolum Statik)
+                // 2. LOGIK MERGE (Kolum 1 hingga 11)
+                // Kita merge semua info statik termasuk Pegawai
                 if (pestEntries.length > 1) {
                     let endRow = rowIndex - 1;
-                    
-                    // Merge dari Kolum 1 (ID) hingga 9 (Syor) SAHAJA.
-                    // Kolum 10 (Perosak), 11 (Tahap), 12 (Luas Serangan) TIDAK di-merge.
-                    for (let c = 1; c <= 9; c++) {
+                    for (let c = 1; c <= 11; c++) {
                         worksheet.mergeCells(startRow, c, endRow, c);
                     }
                 }
 
                 // 3. LOGIK ALIGNMENT
                 for (let r = startRow; r < rowIndex; r++) {
-                    // Kumpulan Statik (Kiri) - Semua Center
-                    for (let c = 1; c <= 9; c++) { 
+                    // Kumpulan Statik (Kiri: Kolum 1-11) -> Center
+                    for (let c = 1; c <= 11; c++) { 
                         worksheet.getCell(r, c).alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
                     }
                     
-                    // Kumpulan Dinamik (Kanan)
-                    worksheet.getCell(r, 10).alignment = { vertical: 'middle', horizontal: 'left' };   // Perosak (Kiri sikit)
-                    worksheet.getCell(r, 11).alignment = { vertical: 'middle', horizontal: 'center' }; // Tahap (Tengah)
-                    worksheet.getCell(r, 12).alignment = { vertical: 'middle', horizontal: 'center' }; // Luas Serangan (Tengah)
+                    // Kumpulan Dinamik (Kanan: Kolum 12-15)
+                    worksheet.getCell(r, 12).alignment = { vertical: 'middle', horizontal: 'left' };   // Perosak
+                    worksheet.getCell(r, 13).alignment = { vertical: 'middle', horizontal: 'center' }; // Tahap
+                    worksheet.getCell(r, 14).alignment = { vertical: 'middle', horizontal: 'center' }; // Luas S
+                    worksheet.getCell(r, 15).alignment = { vertical: 'middle', horizontal: 'center' }; // Peratus
                 }
             });
 
