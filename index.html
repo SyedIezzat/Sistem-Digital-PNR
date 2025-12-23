@@ -502,39 +502,66 @@
         }
 
         // --- EXPORT & VERIFY ---
-        function downloadDualExcel() {
-            if(!fData.length) { alert("Tiada Data"); return; }
-            const wb = XLSX.utils.book_new();
-            
-            // Sheet 1: Data Utama (Tambah ID di depan)
-            const md = fData.map(d => ({
-                "ID": d.id, // <--- ID KEMBALI!
-                "Tarikh": d.t, 
-                "Negeri": d.n, 
-                "Lokasi": d.l, 
-                "Tanaman": d.tn, 
-                "Luas": d.lt, 
-                "Syor": d.s
-            }));
-            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(md), "Data Utama");
-            
-            // Sheet 2: Perincian (Tambah ID di depan)
-            let dd = [];
-            fData.forEach(d => {
-                if(d.p) Object.entries(d.p).forEach(([p,v]) => {
-                    dd.push({
-                        "ID": d.id, // <--- ID KEMBALI!
-                        "Lokasi": d.l, 
-                        "Perosak": p, 
-                        "Luas": v
-                    });
-                });
-            });
-            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dd), "Perincian");
-            
-            XLSX.writeFile(wb, "PNR_Laporan.xlsx");
-        }
+      function downloadDualExcel() {
+            if (!fData.length) { alert("Tiada data!"); return; }
 
+            let flatData = [];
+            let merges = [];
+            let rowIndex = 1; // Mula baris 1 (Header = 0)
+
+            fData.forEach(d => {
+                // Dapatkan senarai perosak atau letak dummy jika tiada
+                let pestEntries = (d.p && Object.keys(d.p).length > 0) 
+                                  ? Object.entries(d.p) 
+                                  : [["TIADA", 0]]; 
+
+                let startRow = rowIndex;
+
+                pestEntries.forEach(([pName, pArea]) => {
+                    flatData.push({
+                        "ID": d.id,
+                        "Tarikh": d.t,
+                        "Negeri": d.n,
+                        "Daerah": d.d,
+                        "Lokasi": d.l,
+                        "Tanaman": d.tn,
+                        "Luas Bancian (Ha)": parseFloat(d.lt), // <--- Pindah ke Kiri
+                        "Tahap": d.k,
+                        "Syor": d.s,
+                        "Perosak": pName,               // <--- Hujung Sekali
+                        "Luas Serangan (Ha)": parseFloat(pArea) // <--- Hujung Sekali
+                    });
+                    rowIndex++;
+                });
+
+                // LOGIK MERGE (Cantumkan info kebun jika ada banyak perosak)
+                if (pestEntries.length > 1) {
+                    let endRow = rowIndex - 1;
+                    
+                    // Kita merge kolum 0 hingga 8 (ID sampai Syor)
+                    // Kolum 9 (Perosak) & 10 (Luas Serangan) TIDAK di-merge
+                    for (let col = 0; col <= 8; col++) {
+                        merges.push({ s: { r: startRow, c: col }, e: { r: endRow, c: col } });
+                    }
+                }
+            });
+
+            const ws = XLSX.utils.json_to_sheet(flatData);
+
+            // Terapkan Merge
+            if (merges.length > 0) ws['!merges'] = merges;
+
+            // Auto-width untuk kolum (kosmetik supaya tak sempit)
+            const wscols = [
+                {wch:5}, {wch:12}, {wch:15}, {wch:15}, {wch:20}, 
+                {wch:15}, {wch:15}, {wch:8}, {wch:30}, {wch:20}, {wch:15}
+            ];
+            ws['!cols'] = wscols;
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Laporan Penuh");
+            XLSX.writeFile(wb, "PNR_Laporan_Tunggal.xlsx");
+        }
         async function dlPDF() {
             const btn = document.querySelector('button[onclick="dlPDF()"]');
             btn.innerHTML = "Jana..."; btn.disabled = true;
