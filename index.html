@@ -137,7 +137,7 @@
                 <div class="col-6 col-md-3">
                     <div class="kpi-card">
                         <div class="d-flex justify-content-between">
-                            <span class="kpi-title">Bancian</span>
+                            <span class="kpi-title">Luas Bancian</span>
                             <div class="kpi-icon bg-success-subtle text-success"><i class="bi bi-rulers"></i></div>
                         </div>
                         <div class="kpi-value" id="k1">0</div>
@@ -147,7 +147,7 @@
                 <div class="col-6 col-md-3">
                     <div class="kpi-card">
                         <div class="d-flex justify-content-between">
-                            <span class="kpi-title">Serangan</span>
+                            <span class="kpi-title">Luas Serangan</span>
                             <div class="kpi-icon bg-danger-subtle text-danger"><i class="bi bi-bug-fill"></i></div>
                         </div>
                         <div class="kpi-value text-danger" id="k2">0</div>
@@ -157,21 +157,21 @@
                 <div class="col-6 col-md-3">
                     <div class="kpi-card">
                         <div class="d-flex justify-content-between">
-                            <span class="kpi-title">Indeks</span>
+                            <span class="kpi-title">Peratus Serangan</span>
                             <div class="kpi-icon bg-warning-subtle text-warning"><i class="bi bi-percent"></i></div>
                         </div>
                         <div class="kpi-value" id="k3">0%</div>
-                        <small class="text-muted">Keterukan</small>
+                        <small class="text-muted">%</small>
                     </div>
                 </div>
                 <div class="col-6 col-md-3">
                     <div class="kpi-card">
                         <div class="d-flex justify-content-between">
-                            <span class="kpi-title">Rekod</span>
+                            <span class="kpi-title">Bil. Rekod</span>
                             <div class="kpi-icon bg-primary-subtle text-primary"><i class="bi bi-file-text"></i></div>
                         </div>
                         <div class="kpi-value" id="k4">0</div>
-                        <small class="text-muted">Jumlah Data</small>
+                        <small class="text-muted">Unit</small>
                     </div>
                 </div>
             </div>
@@ -179,13 +179,13 @@
             <div class="row g-3 mb-4">
                 <div class="col-md-8">
                     <div class="chart-box">
-                        <h6 class="fw-bold mb-3">Carta Serangan Tertinggi (Ha)</h6>
+                        <h6 class="fw-bold mb-3">Carta Serangan Perosak Tertinggi (Ha)</h6>
                         <div style="height: 280px"><canvas id="cBar"></canvas></div>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="chart-box">
-                        <h6 class="fw-bold mb-3">Tahap Keterukan</h6>
+                        <h6 class="fw-bold mb-3">Purata Keterukan Serangan</h6>
                         <div style="height: 280px"><canvas id="cPie"></canvas></div>
                     </div>
                 </div>
@@ -208,12 +208,12 @@
 
             <div class="table-box">
                 <div class="d-flex justify-content-between mb-3">
-                    <h6 class="fw-bold">Rekod Terkini</h6>
+                    <h6 class="fw-bold">Jadual Rekod</h6>
                     <small id="pgInfo" class="text-muted"></small>
                 </div>
                 <div class="table-responsive">
                     <table class="table table-sm table-hover align-middle">
-                        <thead class="table-light"><tr><th>Tarikh</th><th>Negeri</th><th>Lokasi</th><th>Tanaman</th><th>Bancian</th><th>Serangan</th></tr></thead>
+                        <thead class="table-light"><tr><th>Tarikh</th><th>Negeri</th><th>Lokasi</th><th>Tanaman</th><th>Luas Bancian</th><th>Luas Serangan</th></tr></thead>
                         <tbody id="tBody"></tbody>
                     </table>
                 </div>
