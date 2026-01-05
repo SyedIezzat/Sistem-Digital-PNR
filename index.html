@@ -180,7 +180,31 @@
                 <div class="col-md-8">
                     <div class="chart-box">
                         <h6 class="fw-bold mb-3">Carta Serangan Perosak Tertinggi (Ha)</h6>
-                        <div style="height: 280px"><canvas id="cBar"></canvas></div>
+                        <div style="height: 280px"><canvas id="cBar"></canvas><div class="mt-4 pt-3 border-top text-center">
+    <p class="mb-2 fw-bold text-muted" style="font-size: 11px; letter-spacing: 1px;">PETUNJUK TAHAP SERANGAN</p>
+    
+    <div class="d-flex flex-wrap justify-content-center gap-2">
+        <span class="badge bg-success bg-opacity-75 text-white" style="font-weight: 500;">
+            T1 : Sangat Rendah
+        </span>
+
+        <span class="badge bg-info text-dark" style="font-weight: 500;">
+            T2 : Rendah
+        </span>
+
+        <span class="badge bg-warning text-dark" style="font-weight: 500;">
+            T3 : Sederhana
+        </span>
+
+        <span class="badge text-white" style="background-color: #fd7e14; font-weight: 500;">
+            T4 : Teruk
+        </span>
+
+        <span class="badge bg-danger text-white" style="font-weight: 500;">
+            T5 : Sangat Teruk
+        </span>
+    </div>
+</div>
                     </div>
                 </div>
                 <div class="col-md-4">
@@ -610,18 +634,57 @@
             anchor.click();
             window.URL.revokeObjectURL(url);
         }
+        
         async function dlPDF() {
-            const btn = document.querySelector('button[onclick="dlPDF()"]');
-            btn.innerHTML = "Jana..."; btn.disabled = true;
-            try {
-                const m = {user: uProf.name, negeri: document.getElementById('selNegeri').value||"Semua", dates:"Terkini"};
-                const r = await postData('genPDF', {data: fData, meta: m});
-                if(r.success) {
-                    const a = document.createElement('a'); a.href = "data:application/pdf;base64,"+r.base64; a.download = r.filename; a.click();
-                } else alert("Gagal PDF");
-            } catch(e) { alert("Error PDF"); }
-            btn.innerHTML = '<i class="bi bi-file-earmark-pdf"></i> PDF'; btn.disabled = false;
+    const btn = document.querySelector('button[onclick="dlPDF()"]');
+    btn.innerHTML = "Jana..."; 
+    btn.disabled = true;
+
+    // --- 1. MULA LOGIK KIRA TARIKH ---
+    let dateLabel = "Terkini";
+    
+    // Pastikan fData wujud dan ada isi
+    if (typeof fData !== 'undefined' && fData.length > 0) {
+        // Ambil list tarikh dan susun ikut turutan
+        const sortedDates = fData.map(d => d.t).sort();
+        
+        // Fungsi kecil untuk tukar YYYY-MM-DD jadi DD/MM/YYYY
+        const fmt = (d) => d.split('-').reverse().join('/');
+        
+        const first = fmt(sortedDates[0]); // Tarikh Awal
+        const last = fmt(sortedDates[sortedDates.length - 1]); // Tarikh Akhir
+        
+        // Kalau tarikh mula & akhir sama, tunjuk satu je. Kalau beza, tunjuk range.
+        dateLabel = (first === last) ? first : `${first} Hingga ${last}`;
+    }
+    // --- TAMAT LOGIK KIRA TARIKH ---
+
+    try {
+        // Masukkan 'dateLabel' ke dalam object 'meta'
+        const m = {
+            user: uProf.name, 
+            negeri: document.getElementById('selNegeri').value || "Semua", 
+            dates: dateLabel // <--- GUNA VARIABLE BARU TADI
+        };
+        
+        const r = await postData('genPDF', {data: fData, meta: m});
+        
+        if(r.success) {
+            const a = document.createElement('a'); 
+            a.href = "data:application/pdf;base64," + r.base64; 
+            a.download = r.filename; 
+            a.click();
+        } else {
+            alert("Gagal PDF");
         }
+    } catch(e) { 
+        console.error(e); // Bagus untuk debug
+        alert("Error PDF"); 
+    }
+    
+    btn.innerHTML = '<i class="bi bi-file-earmark-pdf"></i> PDF'; 
+    btn.disabled = false;
+}
 
         async function loadPend() {
             const tb = document.getElementById('vBody'), th = document.getElementById('vHead');
