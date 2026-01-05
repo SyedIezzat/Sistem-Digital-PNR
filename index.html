@@ -176,51 +176,48 @@
                 </div>
             </div>
 
-           <div class="row g-3 mb-4">
-                <div class="col-md-8">
-                    <div class="chart-box">
-                        <h6 class="fw-bold mb-3">Carta Serangan Perosak Tertinggi (Ha)</h6>
-                        <div style="height: 280px"><canvas id="cBar"></canvas></div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="chart-box">
-                        <h6 class="fw-bold mb-3">Purata Keterukan Serangan</h6>
-                        <div style="height: 280px"><canvas id="cPie"></canvas></div>
-                    </div>
+         <div class="row g-3 mb-4">
+    
+    <div class="col-md-8">
+        <div class="card h-100 shadow-sm border-0">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3 text-secondary">Carta Serangan Perosak Tertinggi (Ha)</h6>
+                <div style="height: 350px"> <canvas id="cBar"></canvas>
                 </div>
             </div>
-                    </div>
-                </div>
-               <div class="col-md-4 mb-3"> 
-    <div class="card h-100 shadow-sm border-0">
-        <div class="card-header bg-transparent border-0 py-3 d-flex align-items-center">
-            <div class="icon-shape bg-warning text-white rounded-3 p-2 me-2 shadow-sm">
-                <i class="bi bi-pie-chart-fill"></i>
-            </div>
-            <h6 class="m-0 fw-bold text-secondary">Tahap Keterukan</h6>
         </div>
-        
-        <div class="card-body text-center position-relative">
-            <div style="height: 250px;">
-                <canvas id="chartLevel"></canvas>
-            </div>
+    </div>
 
-            <div class="mt-4 pt-3 border-top">
-                <p class="text-uppercase text-muted fw-bold mb-2" style="font-size: 10px; letter-spacing: 1px;">Petunjuk Tahap</p>
-                
-                <div class="d-flex flex-wrap justify-content-center gap-2" style="font-size: 11px;">
-                    <span class="badge rounded-pill bg-success bg-opacity-75 text-white">T1: Sgt Rendah</span>
-                    <span class="badge rounded-pill bg-info text-dark">T2: Rendah</span>
-                    <span class="badge rounded-pill bg-warning text-dark">T3: Sederhana</span>
-                    <span class="badge rounded-pill text-white" style="background-color: #fd7e14;">T4: Teruk</span>
-                    <span class="badge rounded-pill bg-danger text-white">T5: Sgt Teruk</span>
+    <div class="col-md-4">
+        <div class="card h-100 shadow-sm border-0">
+            <div class="card-header bg-transparent border-0 py-3 d-flex align-items-center">
+                <div class="icon-shape bg-warning text-white rounded-3 p-2 me-2 shadow-sm">
+                    <i class="bi bi-pie-chart-fill"></i>
+                </div>
+                <h6 class="m-0 fw-bold text-secondary">Tahap Keterukan</h6>
+            </div>
+            
+            <div class="card-body text-center position-relative">
+                <div style="height: 250px;">
+                    <canvas id="chartLevel"></canvas> 
+                </div>
+
+                <div class="mt-4 pt-3 border-top">
+                    <p class="text-uppercase text-muted fw-bold mb-2" style="font-size: 10px; letter-spacing: 1px;">Petunjuk Tahap</p>
+                    
+                    <div class="d-flex flex-wrap justify-content-center gap-2" style="font-size: 11px;">
+                        <span class="badge rounded-pill bg-success bg-opacity-75 text-white">T1: Sgt Rendah</span>
+                        <span class="badge rounded-pill bg-info text-dark">T2: Rendah</span>
+                        <span class="badge rounded-pill bg-warning text-dark">T3: Sederhana</span>
+                        <span class="badge rounded-pill text-white" style="background-color: #fd7e14;">T4: Teruk</span>
+                        <span class="badge rounded-pill bg-danger text-white">T5: Sgt Teruk</span>
+                    </div>
                 </div>
             </div>
-            </div>
+        </div>
     </div>
-</div>
 
+</div>
             <div class="row g-3 mb-4">
                 <div class="col-md-8">
                     <div class="map-box" id="map"></div>
